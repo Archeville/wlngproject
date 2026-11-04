@@ -78,3 +78,4 @@ button:focus-visible,a:focus-visible,select:focus-visible,.card:focus-visible{ou
 .brand-mark{border-radius:8px}
 .brand-mark svg{width:17px;height:17px;transform:rotate(7deg);stroke-width:2}
 svg{stroke-width:2}
+.organizations{display:flex;gap:8px;flex-wrap:wrap;padding:18px 0 0}.org-filter{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:9px;padding:8px 13px;font-size:12px;font-weight:600;transition:background-color 200ms ease,color 200ms ease,border-color 200ms ease,transform 200ms ease}.org-filter:hover{color:var(--text);background:var(--hover)}.org-filter.active{color:var(--accent-strong);border-color:var(--accent);background:var(--selected)}.org-filter:active{transform:scale(.97)}.org-filter:focus-visible{outline:2px solid var(--accent);outline-offset:3px}@media(prefers-reduced-motion:reduce){.org-filter{transition:none}}.reduce-motion .org-filter{transition:none}

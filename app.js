@@ -1,6 +1,15 @@
 (() => {
   const $ = (s) => document.querySelector(s);
-  const state = { tab: 'live', streams: [], updated: null };
+  const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
+  const pref = (key, value) => { try { if (value !== undefined) localStorage.setItem(key, value); return localStorage.getItem(key); } catch { return null; } };
+  const validOrgs = ['Hololive', 'Nijisanji', 'Independents', 'all'];
+  state.org = validOrgs.includes(pref('wlng-default-org')) ? pref('wlng-default-org') : 'Hololive';
+  let favorites; try { favorites = JSON.parse(pref('wlng-favorites') || '[]'); if (!Array.isArray(favorites)) favorites = []; } catch { favorites = []; }
+  const creatorId = item => typeof item.channel?.id === 'string' ? item.channel.id : '';
+  const isFavorite = item => favorites.includes(creatorId(item));
+  const streamStatus = item => { const scheduled = Date.parse(item.start_scheduled); return item.status === 'live' && !item.start_actual && Number.isFinite(scheduled) && scheduled > Date.now() ? 'upcoming' : item.status; };
+  function toggleFavorite(item) { const id = creatorId(item); if (!id) return; favorites = isFavorite(item) ? favorites.filter(x => x !== id) : [...favorites, id]; pref('wlng-favorites', JSON.stringify(favorites)); render(); updatePlayerFavorite(); }
+  function updatePlayerFavorite() { const item = state.streams.find(x => x.id === state.playerId); const button = $('#player-favorite'); button.disabled = !item || !creatorId(item); button.textContent = item && isFavorite(item) ? '♥ Favorited' : '♡ Favorite creator'; }
   const reducedMotion = () => document.body.classList.contains('reduce-motion') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animate = (element, frames, options = {}) => {
     if (reducedMotion() || !element.animate) return null;
@@ -35,18 +44,18 @@
   const message = (html) => { $('#status').innerHTML = html; $('#status').hidden = false; };
   function render() {
     const query = $('#search').value.trim().toLocaleLowerCase();
-    const items = state.streams.filter(x => x.status === state.tab && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
-    $('#live-count').textContent = state.streams.filter(x => x.status === 'live').length;
-    $('#upcoming-count').textContent = state.streams.filter(x => x.status === 'upcoming').length;
+    const items = state.streams.filter(x => streamStatus(x) === state.tab && (!state.favoritesOnly || isFavorite(x)) && (state.org === 'all' || x.channel?.org === state.org) && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
+    $('#live-count').textContent = state.streams.filter(x => streamStatus(x) === 'live').length;
+    $('#upcoming-count').textContent = state.streams.filter(x => streamStatus(x) === 'upcoming').length;
     $('#list-label').textContent = state.tab === 'live' ? 'LIVE RIGHT NOW' : 'COMING UP';
     $('#result-label').innerHTML = `${items.length} STREAM${items.length === 1 ? '' : 'S'} <b>✧</b>`;
     $('#grid').innerHTML = items.map(x => {
       const name = x.channel?.english_name || x.channel?.name || 'Unknown channel';
-      const photo = safeImage(x.channel?.photo); const label = x.status === 'live' ? '● LIVE' : esc(time(x.start_scheduled || x.available_at));
+      const photo = safeImage(x.channel?.photo); const label = streamStatus(x) === 'live' ? '● LIVE' : esc(time(x.start_scheduled || x.available_at));
       const viewers = Number.isFinite(x.live_viewers) ? `${new Intl.NumberFormat().format(x.live_viewers)} watching` : '';
-      return `<article class="card" tabindex="0" role="button" data-id="${esc(x.id)}" aria-label="Watch ${esc(x.title)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${x.status === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div></article>`;
+      return `<article class="card" tabindex="0" role="button" data-id="${esc(x.id)}" aria-label="Watch ${esc(x.title)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div></article>`;
     }).join('');
-    if (!items.length) message(query ? '<strong>No matches found.</strong><br>Try a different search.' : '<strong>Nothing here just yet.</strong><br>Check back soon or explore the other tab.'); else $('#status').hidden = true;
+    if (!items.length) message(state.favoritesOnly ? '<strong>No favorite creators in this view.</strong><br>Open a stream and choose Favorite creator. Try All agencies or the other stream tab.' : query ? '<strong>No matches found.</strong><br>Try a different search.' : '<strong>Nothing here just yet.</strong><br>Check back soon or explore the other tab.'); else $('#status').hidden = true;
     animateResults();
   }
   async function load() {
@@ -63,6 +72,7 @@
   }
   function play(id) {
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
+    state.playerId = id; updatePlayerFavorite();
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog'));
@@ -72,6 +82,17 @@
   document.fonts?.ready.then(updateTabIndicator);
   updateTabIndicator();
   $('#search').addEventListener('input', () => { if (state.updated) render(); });
+  document.querySelectorAll('.org-filter').forEach(item => { const active = item.dataset.org === state.org; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
+  $('#default-org').value = state.org;
+  $('#default-org').addEventListener('change', e => pref('wlng-default-org', e.target.value));
+  $('#favorites-open').addEventListener('click', e => { state.favoritesOnly = !state.favoritesOnly; e.currentTarget.classList.toggle('selected', state.favoritesOnly); e.currentTarget.setAttribute('aria-pressed', String(state.favoritesOnly)); if (state.updated) render(); });
+  $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) toggleFavorite(item); });
+  document.querySelectorAll('.org-filter').forEach(button => button.addEventListener('click', () => {
+    if (state.org === button.dataset.org) return;
+    state.org = button.dataset.org;
+    document.querySelectorAll('.org-filter').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
+    if (state.updated) render();
+  }));
   $('#grid').addEventListener('click', e => { const card = e.target.closest('[data-id]'); if (card) play(card.dataset.id); });
   $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-id]')) { e.preventDefault(); play(e.target.dataset.id); } });
   $('#settings-open').addEventListener('click', () => openDialog($('#settings-dialog')));
@@ -95,7 +116,6 @@
   });
   $('#player-dialog').addEventListener('close', () => $('#player-slot').replaceChildren());
   document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea/i.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); $('#search').focus(); } });
-  const pref = (key, value) => { try { if (value !== undefined) localStorage.setItem(key, value); return localStorage.getItem(key); } catch { return null; } };
   function setTheme(value) {
     const theme = ['white', 'black', 'black-purple'].includes(value) ? value : 'black';
     document.documentElement.dataset.theme = theme;

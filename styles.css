@@ -22,3 +22,17 @@ body{overflow-x:hidden}
 }
 .reduce-motion *,.reduce-motion *::before,.reduce-motion *::after,.reduce-motion .modal::backdrop{transition:none!important;animation:none!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after,.modal::backdrop{transition:none!important;animation:none!important}}
+
+.auth-button{border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);padding:8px 12px;white-space:nowrap;font-size:12px}.auth-button:hover{border-color:var(--purple)}.auth-button:disabled{opacity:.65;cursor:default}.auth-status{position:fixed;z-index:30;right:16px;top:var(--header);background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:12px;max-width:320px;font-size:13px}@media(max-width:520px){.header-right{gap:8px}.auth-button{font-size:11px;padding:7px}}
+
+/* A roomier viewing area, while leaving YouTube's player controls intact. */
+.player-modal{width:min(96vw,1500px);max-width:none;max-height:96dvh;overflow:auto;padding:18px 22px 22px}
+.player-slot{width:min(100%,calc((96dvh - 170px) * 16 / 9));margin:auto;border-radius:12px;overflow:hidden}
+.player-info{width:min(100%,calc((96dvh - 170px) * 16 / 9));margin:auto}
+.player-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.hub-panel{box-shadow:0 12px 38px #0002}
+.thumbnail{border-radius:12px}
+.card:hover .thumbnail{transform:translateY(-2px)}
+@media(max-width:520px){.player-modal{width:96vw;padding:14px;max-height:94dvh}.player-slot,.player-info{width:100%}.player-actions{gap:12px}}
+@media(prefers-reduced-motion:reduce){.card:hover .thumbnail{transform:none}}
+.reduce-motion .card:hover .thumbnail{transform:none}

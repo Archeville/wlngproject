@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" data-theme="black">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="WLNG — a hub for live and scheduled VTuber streams."><meta name="referrer" content="strict-origin-when-cross-origin">
+<title>WLNG — Stream hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="themes.css"><script defer src="config.js"></script><script defer src="app.js"></script><script defer src="search-motion.js"></script>
+</head>
+<body>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<!-- Lucide icons: official lucide-icons/lucide sources; license: assets/icons/LICENSE -->
+<symbol id="i-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1" />
+  <rect width="7" height="7" x="14" y="3" rx="1" />
+  <rect width="7" height="7" x="14" y="14" rx="1" />
+  <rect width="7" height="7" x="3" y="14" rx="1" /></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34" />
+  <circle cx="11" cy="11" r="8" /></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M10 5H3" />
+  <path d="M12 19H3" />
+  <path d="M14 3v4" />
+  <path d="M16 17v4" />
+  <path d="M21 12h-9" />
+  <path d="M21 19h-5" />
+  <path d="M21 5h-7" />
+  <path d="M8 10v4" />
+  <path d="M8 12H3" /></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" />
+  <path d="M12 6v6h4" /></symbol>
+<symbol id="i-live" viewBox="0 0 24 24"><path d="M16.247 7.761a6 6 0 0 1 0 8.478" />
+  <path d="M19.075 4.933a10 10 0 0 1 0 14.134" />
+  <path d="M4.925 19.067a10 10 0 0 1 0-14.134" />
+  <path d="M7.753 16.239a6 6 0 0 1 0-8.478" />
+  <circle cx="12" cy="12" r="2" /></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 5h16" />
+  <path d="M4 12h16" />
+  <path d="M4 19h16" /></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 7h10v10" />
+  <path d="M7 17 17 7" /></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18" />
+  <path d="m6 6 12 12" /></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></symbol>
+</defs></svg>
+<a class="skip-link" href="#discover">Skip to streams</a>
+<header class="topbar">
+<div class="brand-area"><button id="menu-toggle" class="icon-button" aria-label="Toggle navigation" aria-expanded="true" aria-controls="sidebar"><svg><use href="#i-menu"/></svg></button><a class="brand" href="./" aria-label="WLNG home"><span class="brand-mark"><svg aria-hidden="true"><use href="#i-play"/></svg></span>WLNG<span class="brand-dot">.</span></a><span class="beta">BETA</span></div>
+<label class="search"><svg><use href="#i-search"/></svg><span class="search-field"><input id="search" type="search" placeholder="Search streams or creators…" aria-label="Search streams or creators" autocomplete="off"><span class="search-mirror" aria-hidden="true"></span><span class="search-particles" aria-hidden="true"></span></span><kbd>/</kbd></label>
+<div class="header-right"><button class="icon-button" id="settings-open" aria-label="Open settings" title="Settings"><svg><use href="#i-settings"/></svg></button></div>
+</header>
+<button class="search-shade" tabindex="-1" aria-label="Exit search"></button>
+<aside class="sidebar" id="sidebar">
+
+<nav aria-label="Main navigation"><a class="nav-item selected" href="#discover" aria-current="page"><svg><use href="#i-grid"/></svg><span>Stream hub</span><span class="nav-indicator"></span></a><button class="nav-item" id="sidebar-settings"><svg><use href="#i-settings"/></svg><span>Settings</span></button></nav>
+
+<div class="sidebar-bottom"><a href="https://holodex.net" target="_blank" rel="noopener">Stream data by Holodex <svg><use href="#i-arrow"/></svg></a></div>
+</aside>
+<main class="workspace"><section class="hub-panel" id="discover" aria-label="Stream hub">
+<div class="hub-heading"><div><h1>Stream hub<span>.</span></h1></div><div class="feed-status"><span class="feed-dot"></span><span id="updated">Connecting to feed</span></div></div>
+<div class="toolbar"><div class="tabs" role="tablist" aria-label="Stream status"><button class="tab active" role="tab" id="live-tab" aria-selected="true" data-tab="live"><svg><use href="#i-live"/></svg>Active streams<span class="count" id="live-count">—</span></button><button class="tab" role="tab" id="upcoming-tab" aria-selected="false" data-tab="upcoming"><svg><use href="#i-clock"/></svg>Scheduled streams<span class="count" id="upcoming-count">—</span></button></div><button class="icon-button view-button" id="density-toggle" aria-label="Switch to compact grid" title="Change grid density"><svg><use href="#i-grid"/></svg></button></div>
+<div class="list-meta"><span id="list-label">LIVE RIGHT NOW</span><span id="result-label">ALL STREAMS</span></div>
+<div id="status" class="state" role="status">Loading streams…</div><div id="grid" class="grid" aria-live="polite"></div>
+
+</section></main>
+<dialog id="player-dialog" class="modal player-modal"><div class="modal-top"><span class="eyebrow">NOW WATCHING</span><button class="icon-button close" data-close="player-dialog" aria-label="Close player"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="player-slot" class="player-slot"></div><div class="player-info"><div><h2 id="player-title"></h2><p id="player-channel"></p></div><a id="youtube-link" target="_blank" rel="noopener">Open on YouTube ↗</a></div></dialog>
+<dialog id="settings-dialog" class="modal settings-modal"><div class="modal-top"><div><h2>Settings<span class="brand-dot">.</span></h2></div><button class="icon-button close" data-close="settings-dialog" aria-label="Close settings"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="setting-row"><div><strong>Theme</strong><p>Choose your appearance.</p></div><select id="theme" aria-label="Theme"><option value="white">White</option><option value="black" selected>Black</option><option value="black-purple">Black Purple</option></select></div><div class="setting-row"><div><strong>Reduce motion</strong><p>Limit interface animations.</p></div><input id="reduce-motion" type="checkbox" aria-label="Reduce motion"></div><div class="setting-row"><div><strong>Stream display</strong><p>Choose how many cards fit on screen.</p></div><select id="density" aria-label="Stream card size"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></div><p class="setting-note">Playback volume and captions are available in the YouTube player.</p></dialog>
+</body></html>

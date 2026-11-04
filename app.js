@@ -72,10 +72,26 @@
   }
   function play(id) {
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
-    state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity');
+    state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
-    const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog'));
+    const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
+  }
+  const descriptionCache = new Map();
+  async function loadDescription(item) {
+    $('#player-description').textContent = 'Loading description…';
+    try {
+      let description = item.description;
+      if (typeof description !== 'string' || !description) {
+        if (!descriptionCache.has(item.id)) {
+          if (descriptionCache.size >= 30) descriptionCache.delete(descriptionCache.keys().next().value);
+          const pending = fetch(new URL('/api/videos/' + item.id, window.WLNG_CONFIG.apiBase), {signal:AbortSignal.timeout(10000)}).then(async response => { if (!response.ok) throw new Error('Details unavailable'); const data = await response.json(); if (data.video?.id !== item.id || typeof data.video.description !== 'string') throw new Error('Invalid details'); return data.video.description; }).catch(error => { descriptionCache.delete(item.id); throw error; });
+          descriptionCache.set(item.id, pending);
+        }
+        description = await descriptionCache.get(item.id);
+      }
+      if (state.playerId === item.id && $('#player-dialog').open) $('#player-description').textContent = description || 'No description is available for this stream.';
+    } catch { if (state.playerId === item.id && $('#player-dialog').open) $('#player-description').textContent = 'The description could not be loaded. You can read it on YouTube.'; }
   }
   document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => { if (state.tab === button.dataset.tab) return; state.tab = button.dataset.tab; document.querySelectorAll('.tab').forEach(b => { const active = b === button; b.classList.toggle('active', active); b.setAttribute('aria-selected', String(active)); }); $('#list-label').textContent = state.tab === 'live' ? 'LIVE RIGHT NOW' : 'COMING UP'; updateTabIndicator(); if (state.updated) render(); else animateResults(); }));
   new ResizeObserver(updateTabIndicator).observe($('.tabs'));
@@ -114,7 +130,7 @@
       if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
     });
   });
-  $('#player-dialog').addEventListener('close', () => { $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement === $('#player-dialog')) document.exitFullscreen().catch(() => {}); });
+  $('#player-dialog').addEventListener('close', () => { $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
   function showWatchPanel(panel) {
     $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
     document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });
@@ -124,7 +140,17 @@
   }
   document.querySelectorAll('[data-watch-panel]').forEach(button => button.addEventListener('click', () => showWatchPanel(button.dataset.watchPanel)));
   $('#watch-theater').addEventListener('click', event => { const active = $('#player-dialog').classList.toggle('theater'); event.currentTarget.setAttribute('aria-pressed', String(active)); });
-  $('#watch-fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('#player-dialog').requestFullscreen(); } catch { $('#watch-message').textContent = 'Fullscreen is unavailable in this browser. Theater mode is still available.'; } });
+  $('#watch-large').addEventListener('click', event => { const large = $('#player-dialog').classList.toggle('is-large'); event.currentTarget.textContent = large ? 'Popup' : 'Large'; event.currentTarget.setAttribute('aria-pressed', String(large)); });
+  const fullscreenButton = $('#watch-fullscreen'), watchShell = $('#watch-shell');
+  const narrowWatch = matchMedia('(max-width: 700px)');
+  function placeDescription() { (narrowWatch.matches ? $('.watch-layout') : $('#watch-main')).append($('.watch-description')); }
+  narrowWatch.addEventListener('change', placeDescription); placeDescription();
+  if (!document.fullscreenEnabled || !watchShell.requestFullscreen) { fullscreenButton.disabled = true; fullscreenButton.title = 'Native fullscreen is unavailable here. Use Large to fill the browser page.'; }
+  fullscreenButton.addEventListener('click', async () => {
+    try { if (document.fullscreenElement) await document.exitFullscreen(); else await watchShell.requestFullscreen(); }
+    catch { $('#watch-message').textContent = 'Your browser could not enter fullscreen. Use Large to fill the browser page.'; }
+  });
+  document.addEventListener('fullscreenchange', () => { const active = document.fullscreenElement === watchShell; fullscreenButton.textContent = active ? 'Exit fullscreen' : 'Fullscreen'; fullscreenButton.setAttribute('aria-pressed', String(active)); });
   $('#watch-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('#youtube-link').href); $('#watch-message').textContent = 'YouTube link copied.'; } catch { $('#watch-message').textContent = 'Copy the link using Open on YouTube.'; } });
   $('#watch-dim').addEventListener('input', event => $('#player-dialog').style.setProperty('--watch-shade', 'rgba(0,0,0,' + Number(event.target.value) / 100 + ')'));
   document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea/i.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); $('#search').focus(); } });

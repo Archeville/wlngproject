@@ -75,7 +75,7 @@
     state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity');
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
-    const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog'));
+    const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog'));
   }
   document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => { if (state.tab === button.dataset.tab) return; state.tab = button.dataset.tab; document.querySelectorAll('.tab').forEach(b => { const active = b === button; b.classList.toggle('active', active); b.setAttribute('aria-selected', String(active)); }); $('#list-label').textContent = state.tab === 'live' ? 'LIVE RIGHT NOW' : 'COMING UP'; updateTabIndicator(); if (state.updated) render(); else animateResults(); }));
   new ResizeObserver(updateTabIndicator).observe($('.tabs'));

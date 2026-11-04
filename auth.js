@@ -4,7 +4,7 @@ const showStatus = (message) => { status.textContent = message; status.hidden = 
 
 async function initializeAuth() {
   try {
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/+esm');
+    const { createClient } = await import('./assets/vendor/supabase.mjs');
     const { supabaseUrl, supabaseKey } = window.WLNG_CONFIG;
     const client = createClient(supabaseUrl, supabaseKey, { auth: { flowType: 'pkce' } });
     window.WLNG_AUTH = { getAccessToken: async () => (await client.auth.getSession()).data.session?.access_token || null };

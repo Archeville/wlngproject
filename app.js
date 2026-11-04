@@ -42,9 +42,15 @@
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const time = (value) => { const d = new Date(value); return Number.isNaN(d.valueOf()) ? 'Time to be announced' : new Intl.DateTimeFormat(undefined, { weekday:'short', hour:'numeric', minute:'2-digit', month:'short', day:'numeric' }).format(d); };
   const message = (html) => { $('#status').innerHTML = html; $('#status').hidden = false; };
+  function extraFilters(){return ['all','Independents'].includes(state.org);}
+  function updateFilters(){$('#stream-filters').hidden=!extraFilters();}
+  updateFilters();
+  for(const id of ['filter-name','filter-viewers'])$('#'+id).addEventListener('input',()=>{if(state.updated)render();});
+  $('#filters-clear').addEventListener('click',()=>{$('#filter-name').value='';$('#filter-viewers').value='0';if(state.updated)render();});
   function render() {
     const query = $('#search').value.trim().toLocaleLowerCase();
-    const items = state.streams.filter(x => streamStatus(x) === state.tab && (!state.favoritesOnly || isFavorite(x)) && (state.org === 'all' || x.channel?.org === state.org) && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
+    const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
+    const items = state.streams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && (!state.favoritesOnly || isFavorite(x)) && (state.org === 'all' || x.channel?.org === state.org) && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
     $('#live-count').textContent = state.streams.filter(x => streamStatus(x) === 'live').length;
     $('#upcoming-count').textContent = state.streams.filter(x => streamStatus(x) === 'upcoming').length;
     $('#list-label').textContent = state.tab === 'live' ? 'LIVE RIGHT NOW' : 'COMING UP';
@@ -105,12 +111,13 @@
   $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) toggleFavorite(item); });
   document.querySelectorAll('.org-filter').forEach(button => button.addEventListener('click', () => {
     if (state.org === button.dataset.org) return;
-    state.org = button.dataset.org;
+    state.org = button.dataset.org; updateFilters();
     document.querySelectorAll('.org-filter').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
     if (state.updated) render();
   }));
   $('#grid').addEventListener('click', e => { const card = e.target.closest('[data-id]'); if (card) play(card.dataset.id); });
   $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-id]')) { e.preventDefault(); play(e.target.dataset.id); } });
+  $('#skins-open').addEventListener('click',()=>openDialog($('#skins-dialog')));
   $('#account-open').addEventListener('click', () => { openDialog($('#settings-dialog')); $('#settings-dialog').scrollTop = 0; });
   $('#settings-open').addEventListener('click', () => openDialog($('#settings-dialog')));
   $('#sidebar-settings').addEventListener('click', () => openDialog($('#settings-dialog')));

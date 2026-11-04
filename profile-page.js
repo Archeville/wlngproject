@@ -1,3 +1,4 @@
+import { skinPaint } from './cosmetics.mjs';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);
 if(match){
@@ -10,7 +11,7 @@ if(match){
       if(!p||!/^[a-z0-9_]{3,24}$/.test(p.username)||!Number.isInteger(p.level)||p.level<1||!Number.isFinite(p.xp)||!Number.isFinite(p.required)||p.required<=0||typeof p.description!=='string')throw new Error('Profile unavailable.');
       const canonical='/user/'+p.username;if(location.pathname!==canonical){location.replace(canonical);return;}
       document.title='@'+p.username+' — WLNG';
-      view.style.setProperty('--skin',p.skin==='pink'?'#c34c91':p.skin==='purple'?'#533080':'#2567a8');
+      view.style.setProperty('--skin',skinPaint(p.skin,p.level));
       const top=document.createElement('div');top.className='profile-top';
       const badge=document.createElement('span');badge.className='badge '+(p.level>=50?'black':p.level>=25?'red':p.level>=10?'yellow':'blue');badge.textContent=p.level;
       const title=document.createElement('div'),name=document.createElement('h1'),level=document.createElement('small');name.textContent='@'+p.username;level.textContent='Level '+p.level;title.append(name,level);top.append(badge,title);

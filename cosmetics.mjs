@@ -1,0 +1,3 @@
+export const barSkins=[['blue','Blue',1,'#2567a8'],['pink','Pink',5,'#c34c91'],['purple','Dark purple',10,'#533080'],['pink-blue','Pink & blue',20,'linear-gradient(90deg,#de65b1,#429ef5)'],['black-white','Black & white',30,'linear-gradient(90deg,#151515,#f5f5f5)']];
+export const themeSkins=[['none','None',1,'linear-gradient(90deg,#202020,#777)'],['solar','Solar',10,'linear-gradient(90deg,#3c2417,#eeaf55)'],['aurora','Aurora',10,'linear-gradient(90deg,#163c43,#8e70c3)'],['natural','Natural',10,'linear-gradient(90deg,#122b21,#6aaf83)']];
+export const skinPaint=(id,level)=>barSkins.find(x=>x[0]===id&&level>=x[2])?.[3]||barSkins[0][3];

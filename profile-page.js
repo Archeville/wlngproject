@@ -10,13 +10,14 @@ if(match){
       if(!p||!/^[a-z0-9_]{3,24}$/.test(p.username)||!Number.isInteger(p.level)||p.level<1||!Number.isFinite(p.xp)||!Number.isFinite(p.required)||p.required<=0||typeof p.description!=='string')throw new Error('Profile unavailable.');
       const canonical='/user/'+p.username;if(location.pathname!==canonical){location.replace(canonical);return;}
       document.title='@'+p.username+' — WLNG';
+      view.style.setProperty('--skin',p.skin==='pink'?'#c34c91':p.skin==='purple'?'#533080':'#2567a8');
       const top=document.createElement('div');top.className='profile-top';
       const badge=document.createElement('span');badge.className='badge '+(p.level>=50?'black':p.level>=25?'red':p.level>=10?'yellow':'blue');badge.textContent=p.level;
       const title=document.createElement('div'),name=document.createElement('h1'),level=document.createElement('small');name.textContent='@'+p.username;level.textContent='Level '+p.level;title.append(name,level);top.append(badge,title);
       const bar=document.createElement('div');bar.className='progress';bar.setAttribute('role','progressbar');bar.setAttribute('aria-label','XP for this level');bar.setAttribute('aria-valuenow',p.xp);bar.setAttribute('aria-valuemax',p.required);bar.setAttribute('aria-valuemin','0');
       const fill=document.createElement('div');fill.className='fill';fill.style.width=Math.max(0,Math.min(100,p.xp/p.required*100))+'%';const label=document.createElement('span');label.className='progress-label';label.textContent=p.xp.toFixed(1)+' / '+p.required+' XP';bar.append(fill,label);
       view.replaceChildren(top,bar);if(p.description){const bio=document.createElement('p');bio.className='description';bio.textContent=p.description;view.append(bio);}
-      const footer=document.createElement('footer');footer.textContent='WLNG profile';view.append(footer);
+      
     }catch(error){view.replaceChildren(Object.assign(document.createElement('h1'),{textContent:'Profile unavailable'}),Object.assign(document.createElement('p'),{textContent:error.message}));}
   })();
 }

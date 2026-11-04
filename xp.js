@@ -51,6 +51,7 @@ import { levelProgress } from './levels.mjs';
     // outstanding portion is reconciled when the window is settled/refilled.
     const projected = (state?.savedXp || 0) + (state?.endsAt ? Math.max(0, Math.min(now, state.endsAt) - state.serverNow) * state.xpPerMinute / 60000 : 0);
     const { level, intoLevel, required } = levelProgress(projected);
+    if(window.WLNG_LEVEL!==level){window.WLNG_LEVEL=level;window.dispatchEvent(new CustomEvent('wlng-level',{detail:{level}}));}
     const remaining = active ? Math.max(0, state.endsAt - now) : 0;
     const ratio = remaining / (state?.windowMs || 1800000);
     for (const root of roots) {

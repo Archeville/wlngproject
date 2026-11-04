@@ -1,0 +1,39 @@
+/* Viewing popup and optional site activity. No styles alter the video image. */
+body:has(dialog[open]){overflow:hidden}
+.player-modal{--watch-shade:rgba(0,0,0,.3);width:97vw;max-width:1800px;height:94dvh;max-height:94dvh;padding:0;overflow:hidden;border-radius:18px;box-shadow:0 30px 100px #0009}
+.watch-top{height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border)}
+.watch-wordmark{font:700 22px 'Space Grotesk',sans-serif;letter-spacing:-1px}.watch-wordmark>span{color:var(--accent)}.watch-wordmark small{font:600 10px 'DM Sans',sans-serif;letter-spacing:2px;color:var(--muted);margin-left:12px}
+.watch-top-actions,.watch-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.watch-button{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:9px;background:var(--raised);color:var(--text);padding:9px 12px;font-size:12px;cursor:pointer}
+.watch-button:hover,.watch-button.selected{border-color:var(--accent);color:var(--accent-strong)}
+.watch-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;height:calc(100% - 62px)}
+.watch-main{min-width:0;overflow-y:auto;padding:18px;background:linear-gradient(var(--watch-shade),var(--watch-shade)),var(--surface)}
+.player-modal .player-slot{width:100%;max-height:calc(94dvh - 250px);aspect-ratio:16/9;background:#000;border-radius:10px;margin:0;overflow:hidden}
+.player-modal .player-slot iframe{display:block;width:100%;height:100%;border:0}
+.player-modal .player-info{width:100%;margin:0}.player-info h2{line-height:1.5;font-size:17px}.player-info p{color:var(--muted)}
+.watch-toolbar{padding:12px 0}.watch-dim{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:11px;color:var(--muted)}.watch-dim input{width:90px;accent-color:var(--accent)}
+.watch-message,.watch-note{font-size:12px;line-height:1.8;color:var(--muted)}.watch-message{margin:4px 0}
+.watch-side{padding:18px;overflow:auto;background:var(--surface);border-left:1px solid var(--border)}
+.watch-side-tabs{display:flex;gap:8px;margin-bottom:28px}.watch-side-tabs .watch-button{flex:1}
+.watch-eyebrow{font-size:9px;font-weight:700;letter-spacing:1.6px;color:var(--muted)}.watch-side h3{font-size:13px;font-weight:500}.watch-separator{height:1px;background:var(--border);margin:24px 0}
+#watch-chat{height:calc(100% - 64px)}#chat-slot{height:calc(100% - 75px);min-height:280px}#chat-slot iframe{width:100%;height:100%;border:0;border-radius:10px}
+.player-modal.theater .watch-layout{grid-template-columns:minmax(0,1fr)}.player-modal.theater .watch-side{display:none}
+.player-modal:fullscreen{width:100vw;height:100dvh;max-height:none;max-width:none;border:0;border-radius:0}.player-modal:fullscreen .player-slot{max-height:calc(100dvh - 250px)}
+.sidebar-bottom .xp-widget{margin:0 -4px 24px}.xp-widget{margin-top:16px;color:var(--text)}
+.xp-summary{display:flex;align-items:center;gap:10px}.level-badge{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#297cd9;color:white;font-size:13px;font-weight:700;flex-shrink:0}
+[data-tier=yellow] .level-badge{background:#e5ba37;color:#211b08}[data-tier=red] .level-badge{background:#dc4958;color:white}[data-tier=black] .level-badge{background:#08090b;color:white;box-shadow:0 0 0 1px #737780}
+.xp-summary-copy{display:grid;gap:4px;min-width:0}.xp-summary strong{font-size:11px;font-weight:500}.xp-summary-copy>span,[data-xp-timer]{font-size:10px;color:var(--muted)}[data-xp-timer]{margin-left:auto;white-space:nowrap}
+.xp-progress{--xp-progress:0%;height:5px;margin:15px 0 22px;border-radius:20px;position:relative;overflow:hidden;background:var(--border)}.xp-progress-fill{position:absolute;inset:0 auto 0 0;width:var(--xp-progress);background:#409bf3;border-radius:inherit}
+.xp-progress i{display:none;position:absolute;width:2px;height:2px;top:1.5px;border-radius:50%;background:white;box-shadow:-3px 0 3px #fff2}
+.earning .xp-progress i{display:block;animation:xp-spark 1.25s linear infinite}.earning .xp-progress i:nth-of-type(2){animation-delay:-.45s}.earning .xp-progress i:nth-of-type(3){animation-delay:-.85s}
+@keyframes xp-spark{from{left:-3px}to{left:100%}}
+.activity-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.activity-label>span{font-size:9px}
+.activity-slider{--charge:0%;--charge-color:#4aa7ff;appearance:none;-webkit-appearance:none;width:100%;height:4px;display:block;margin:20px 0;background:linear-gradient(to right,var(--charge-color) var(--charge),var(--border) var(--charge));border-radius:20px;cursor:pointer;touch-action:pan-y}
+.activity-slider::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:white;box-shadow:0 0 0 3px #fff1}
+.activity-slider::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:white}
+.activity-slider:disabled{opacity:.35;cursor:default}.xp-help{font-size:10px;color:var(--muted);line-height:1.7}.xp-error{display:block;font-size:11px;color:#ed8992;line-height:1.6}
+.xp-delete{font-size:10px;color:var(--muted);background:none;border:0;text-decoration:underline;padding:8px 0;margin-top:8px}
+.xp-delete:disabled{opacity:.35;cursor:default}
+@media(max-width:950px){.watch-layout{grid-template-columns:minmax(0,1fr) 260px}.watch-side{padding:14px}.watch-main{padding:12px}.watch-dim{margin-left:0}.watch-button{font-size:11px;padding:8px}}
+@media(max-width:700px){.player-modal{height:96dvh;max-height:96dvh;width:98vw;overflow:auto}.watch-top{padding:0 12px;gap:6px}.watch-wordmark small{display:none}.watch-layout{display:flex;flex-direction:column;height:auto}.watch-side{border-left:0;border-top:1px solid var(--border)}.player-modal .player-slot{max-height:none;min-height:170px}.watch-side-tabs{margin-bottom:18px}.watch-message{font-size:10px}.watch-top-actions{gap:5px}.player-modal.theater .watch-side{display:block}.player-modal.theater .watch-layout{display:flex}}
+@media(prefers-reduced-motion:reduce){.earning .xp-progress i{animation:none;display:none}}.reduce-motion .earning .xp-progress i{animation:none;display:none}

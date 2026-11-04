@@ -72,7 +72,7 @@
   }
   function play(id) {
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
-    state.playerId = id; updatePlayerFavorite();
+    state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity');
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog'));
@@ -114,7 +114,19 @@
       if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
     });
   });
-  $('#player-dialog').addEventListener('close', () => $('#player-slot').replaceChildren());
+  $('#player-dialog').addEventListener('close', () => { $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement === $('#player-dialog')) document.exitFullscreen().catch(() => {}); });
+  function showWatchPanel(panel) {
+    $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
+    document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });
+    if (panel === 'chat' && !$('#chat-slot').children.length && validId(state.playerId)) {
+      const chat = document.createElement('iframe'); chat.title = 'YouTube live chat'; chat.src = 'https://www.youtube.com/live_chat?v=' + state.playerId + '&embed_domain=' + encodeURIComponent(location.hostname) + (document.documentElement.dataset.theme !== 'white' ? '&dark_theme=1' : ''); chat.referrerPolicy = 'strict-origin-when-cross-origin'; $('#chat-slot').replaceChildren(chat);
+    }
+  }
+  document.querySelectorAll('[data-watch-panel]').forEach(button => button.addEventListener('click', () => showWatchPanel(button.dataset.watchPanel)));
+  $('#watch-theater').addEventListener('click', event => { const active = $('#player-dialog').classList.toggle('theater'); event.currentTarget.setAttribute('aria-pressed', String(active)); });
+  $('#watch-fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('#player-dialog').requestFullscreen(); } catch { $('#watch-message').textContent = 'Fullscreen is unavailable in this browser. Theater mode is still available.'; } });
+  $('#watch-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('#youtube-link').href); $('#watch-message').textContent = 'YouTube link copied.'; } catch { $('#watch-message').textContent = 'Copy the link using Open on YouTube.'; } });
+  $('#watch-dim').addEventListener('input', event => $('#player-dialog').style.setProperty('--watch-shade', 'rgba(0,0,0,' + Number(event.target.value) / 100 + ')'));
   document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea/i.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); $('#search').focus(); } });
   function setTheme(value) {
     const theme = ['white', 'black', 'black-purple'].includes(value) ? value : 'black';

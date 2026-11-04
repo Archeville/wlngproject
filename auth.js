@@ -7,11 +7,13 @@ async function initializeAuth() {
     const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/+esm');
     const { supabaseUrl, supabaseKey } = window.WLNG_CONFIG;
     const client = createClient(supabaseUrl, supabaseKey, { auth: { flowType: 'pkce' } });
+    window.WLNG_AUTH = { getAccessToken: async () => (await client.auth.getSession()).data.session?.access_token || null };
     let signedIn = false;
     client.auth.onAuthStateChange((_event, session) => {
       signedIn = Boolean(session);
       button.textContent = signedIn ? 'Sign out' : 'Sign in with Google';
       button.disabled = false;
+      window.dispatchEvent(new CustomEvent('wlng-auth', { detail: { userId: session?.user?.id || null } }));
     });
     button.addEventListener('click', async () => {
       button.disabled = true;

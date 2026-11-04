@@ -72,7 +72,7 @@
   }
   function play(id) {
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
-    state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
+    $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
@@ -111,6 +111,7 @@
   }));
   $('#grid').addEventListener('click', e => { const card = e.target.closest('[data-id]'); if (card) play(card.dataset.id); });
   $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-id]')) { e.preventDefault(); play(e.target.dataset.id); } });
+  $('#account-open').addEventListener('click', () => { openDialog($('#settings-dialog')); $('#settings-dialog').scrollTop = 0; });
   $('#settings-open').addEventListener('click', () => openDialog($('#settings-dialog')));
   $('#sidebar-settings').addEventListener('click', () => openDialog($('#settings-dialog')));
   const mobile = window.matchMedia('(max-width: 780px)');
@@ -135,9 +136,11 @@
     $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
     document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });
     if (panel === 'chat' && !$('#chat-slot').children.length && validId(state.playerId)) {
-      const chat = document.createElement('iframe'); chat.title = 'YouTube live chat'; chat.src = 'https://www.youtube.com/live_chat?v=' + state.playerId + '&embed_domain=' + encodeURIComponent(location.hostname) + (document.documentElement.dataset.theme !== 'white' ? '&dark_theme=1' : ''); chat.referrerPolicy = 'strict-origin-when-cross-origin'; $('#chat-slot').replaceChildren(chat);
+      const chat = document.createElement('iframe'); chat.title = 'YouTube live chat'; chat.src = 'https://www.youtube.com/live_chat?v=' + state.playerId + '&embed_domain=' + encodeURIComponent(location.hostname) + ($('#chat-theme').value === 'dark' ? '&dark_theme=1' : '&dark_theme=0'); chat.referrerPolicy = 'strict-origin-when-cross-origin'; chat.style.colorScheme = 'only light'; $('#chat-slot').replaceChildren(chat);
     }
   }
+  $('#chat-theme').value = pref('wlng-chat-theme') === 'light' ? 'light' : 'dark';
+  $('#chat-theme').addEventListener('change', () => { pref('wlng-chat-theme', $('#chat-theme').value); $('#chat-slot').replaceChildren(); showWatchPanel('chat'); });
   document.querySelectorAll('[data-watch-panel]').forEach(button => button.addEventListener('click', () => showWatchPanel(button.dataset.watchPanel)));
   $('#watch-theater').addEventListener('click', event => { const active = $('#player-dialog').classList.toggle('theater'); event.currentTarget.setAttribute('aria-pressed', String(active)); });
   $('#watch-large').addEventListener('click', event => { const large = $('#player-dialog').classList.toggle('is-large'); event.currentTarget.textContent = large ? 'Popup' : 'Large'; event.currentTarget.setAttribute('aria-pressed', String(large)); });

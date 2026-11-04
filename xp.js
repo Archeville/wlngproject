@@ -1,14 +1,17 @@
 import { levelProgress } from './levels.mjs';
 (() => {
   const roots = [...document.querySelectorAll('[data-xp-widget]')];
-  for (const root of roots) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Level <span data-level-text>1</span></strong><span data-xp-total>0 XP saved</span></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"><span class="xp-sparkles" aria-hidden="true"></span></span></div><label class="activity-label">Activity window <span>5 XP / min</span></label><div class="activity-control"><input class="activity-slider" type="range" min="0" max="100" value="0" step="0.01" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><span class="slider-burst" aria-hidden="true"></span></div><p class="xp-help">Sign in to earn activity XP.</p><span class="xp-error" role="status"></span>`;
+  for (const root of roots) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Level <span data-level-text>1</span></strong></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"><span class="xp-sparkles" aria-hidden="true"></span></span><span class="xp-progress-label" data-xp-label>0 / 100 XP</span></div><div class="activity-control"><input class="activity-slider" type="range" min="0" max="100" value="0" step="0.01" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><span class="slider-burst" aria-hidden="true"></span><span class="slider-direction" aria-hidden="true">←</span></div><p class="xp-help">Sign in to earn activity XP.</p><span class="xp-error" role="status"></span>`;
   let state = null, receivedAt = 0, available = false, busy = false, userId = null, generation = 0, expiryAttempted = false;
   const pendingIds = {};
+  let hintExpiresAt = 0, hintMessage = "";
+  function activityHint(refilled) { hintExpiresAt = performance.now() + 5000; hintMessage = refilled ? "Slide right to refill. Video playback is unrelated." : "Activity window ended. Slide right to refill."; }
+  function refillArrow() { for (const root of roots) { const arrow = root.querySelector(".slider-direction"); const distance = Math.max(0, root.querySelector(".activity-control").clientWidth - 32); arrow.getAnimations().forEach(animation => animation.cancel()); arrow.animate(reducedMotion() ? [{opacity:1},{opacity:0}] : [{opacity:0,transform:"translateX(0)"},{opacity:1,offset:.15},{opacity:0,transform:"translateX(-"+distance+"px)"}],{duration:850,easing:"ease-out"}); } }
   const dangerZone = document.querySelector('#danger-zone'), dangerActions = document.querySelector('#danger-actions'), unlockButton = document.querySelector('#danger-unlock'), deleteButton = document.querySelector('#xp-delete');
   let dangerUnlocked = false, holdFrame = null, holdStartedAt = null;
   const reducedMotion = () => document.body.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  for (const root of roots) for (let i = 0; i < 14; i++) {
-    const dot = document.createElement('i'); dot.style.top = (12 + Math.random() * 66) + '%'; dot.style.setProperty('--spark-time', (.65 + Math.random() * .85) + 's'); dot.style.setProperty('--spark-delay', (-Math.random() * 2) + 's'); dot.style.setProperty('--spark-size', (1.5 + Math.random() * 1.4) + 'px'); root.querySelector('.xp-sparkles').append(dot);
+  for (const root of roots) for (let i = 0; i < 4; i++) {
+    const dot = document.createElement('i'); dot.style.top = (12 + Math.random() * 66) + '%'; dot.style.setProperty('--spark-time', (.65 + Math.random() * .85) + 's'); dot.style.setProperty('--spark-delay', (-Math.random() * 2) + 's'); dot.style.setProperty('--spark-size', (.8 + Math.random() * .6) + 'px'); root.querySelector('.xp-sparkles').append(dot);
   }
   function burst() {
     if (reducedMotion() || document.hidden) return;
@@ -55,8 +58,8 @@ import { levelProgress } from './levels.mjs';
       root.dataset.tier = level >= 50 ? 'black' : level >= 25 ? 'red' : level >= 10 ? 'yellow' : 'blue';
       root.querySelector('[data-level]').textContent = level;
       root.querySelector('[data-level-text]').textContent = level;
-      root.querySelector('[data-xp-total]').textContent = `${projected.toFixed(1)} XP${active || projected > (state?.savedXp || 0) + .0001 ? '' : ' saved'}`;
-      root.querySelector('[data-xp-timer]').textContent = active ? `${Math.ceil(remaining / 60000)}m left` : 'Idle';
+      root.querySelector('[data-xp-label]').textContent = `${intoLevel.toFixed(1)} / ${required} XP`;
+      root.querySelector('[data-xp-timer]').textContent = active ? `${Math.floor(Math.ceil(remaining / 1000) / 60)}:${String(Math.ceil(remaining / 1000) % 60).padStart(2, '0')} left` : '00:00';
       const progress = root.querySelector('.xp-progress');
       const percent = intoLevel / required * 100;
       progress.style.setProperty('--xp-progress', `${percent}%`); progress.setAttribute('aria-valuenow', percent.toFixed(1));
@@ -70,10 +73,10 @@ import { levelProgress } from './levels.mjs';
       slider.style.setProperty('--charge', `${displayRatio * 100}%`);
       slider.style.setProperty('--charge-color', dragging || ratio > .5 ? '#4aa7ff' : ratio > .2 ? '#eac44e' : '#ec646e');
       slider.setAttribute('aria-valuetext', active ? `${Math.ceil(remaining / 60000)} minutes remaining. Slide right to refill.` : 'Slide right to start 30 minutes.');
-      root.querySelector('.xp-help').textContent = !userId ? 'Sign in to earn activity XP.' : !available ? 'Activity XP is unavailable. Try signing in again or refresh.' : active ? 'Slide right to refill. Video playback is unrelated.' : 'Slide right for 30 minutes. No video needed.';
+      const hint = !userId ? 'Sign in to earn XP.' : performance.now() < hintExpiresAt ? hintMessage : ''; root.querySelector('.xp-help').textContent = hint; root.querySelector('.xp-help').hidden = !hint;
     }
     dangerActions.disabled = !dangerUnlocked || !available || busy; deleteButton.disabled = dangerActions.disabled;
-    if (available && state?.endsAt && now >= state.endsAt && !expiryAttempted && !busy) { expiryAttempted = true; burst(); void send('settle'); }
+    if (available && state?.endsAt && now >= state.endsAt && !expiryAttempted && !busy) { expiryAttempted = true; activityHint(false); burst(); void send('settle'); }
   }
   async function request(action, token) {
     const response = await fetch(new URL(`/api/xp/${action}`, window.WLNG_CONFIG.apiBase), {
@@ -95,7 +98,7 @@ import { levelProgress } from './levels.mjs';
       const data = await request(action, token);
       if (ownGeneration !== generation) return;
       state = data; receivedAt = performance.now(); available = true;
-      if (action === 'start') { draw(); burst(); }
+      if (action === 'start') { activityHint(true); draw(); burst(); refillArrow(); }
       if (action !== 'state') { delete pendingIds[action]; channel?.postMessage({ userId }); }
       expiryAttempted = Boolean(state.endsAt && state.endsAt <= state.serverNow);
     } catch (failure) { if (ownGeneration === generation) error(failure.message); }
@@ -106,12 +109,14 @@ import { levelProgress } from './levels.mjs';
     slider.addEventListener('input', () => { slider.style.setProperty('--charge', `${slider.value}%`); root.querySelector('.activity-control').style.setProperty('--charge', `${slider.value}%`); });
     slider.addEventListener('change', () => { if (Number(slider.value) >= 99 && available && !busy) { expiryAttempted = false; void send('start'); } else draw(); });
   }
-  window.addEventListener('wlng-auth', event => {
+  function authChanged(event) {
     if (event.detail.userId === userId) return;
-    userId = event.detail.userId; lockDanger(); generation++; state = null; available = false; expiryAttempted = false;
+    userId = event.detail.userId; hintExpiresAt = 0; lockDanger(); generation++; state = null; available = false; expiryAttempted = false;
     for (const key of Object.keys(pendingIds)) delete pendingIds[key];
     draw(); if (userId) setTimeout(() => void send(), 0);
-  });
+  }
+  window.addEventListener('wlng-auth', authChanged);
+  if (Object.hasOwn(window, 'WLNG_AUTH_USER')) authChanged({detail:{userId:window.WLNG_AUTH_USER}});
   if (channel) channel.onmessage = event => { if (userId && event.data.userId === userId) void send(); };
   setInterval(draw, 100); draw();
 })();

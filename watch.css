@@ -32,6 +32,11 @@ body:has(dialog[open]){overflow:hidden}
 [data-tier=yellow] .level-badge{background:#e5ba37;color:#211b08}[data-tier=red] .level-badge{background:#dc4958;color:white}[data-tier=black] .level-badge{background:#08090b;color:white;box-shadow:0 0 0 1px #737780}
 .xp-summary-copy{display:grid;gap:4px;min-width:0}.xp-summary strong{font-size:11px;font-weight:500}.xp-summary-copy>span,[data-xp-timer]{font-size:10px;color:var(--muted)}[data-xp-timer]{margin-left:auto;white-space:nowrap}
 .xp-progress{--xp-progress:0%;height:12px;margin:18px 0 23px;border-radius:20px;position:relative;overflow:hidden;background:var(--border)}.xp-progress-fill{position:absolute;inset:0 auto 0 0;width:var(--xp-progress);background:#409bf3;border-radius:inherit;overflow:hidden}
+.xp-progress{height:23px;border:1px solid var(--border);border-radius:2px}
+.xp-progress-fill{border-radius:0;background:#2567a8}
+.xp-progress::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),var(--surface) calc(10% - 1px),var(--surface) 10%);pointer-events:none}
+.xp-progress-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;letter-spacing:.2px;font-weight:600;z-index:1;text-shadow:0 1px 2px #0009;pointer-events:none}
+.slider-direction{position:absolute;right:8px;top:3px;color:#83c7ff;font-size:23px;line-height:28px;opacity:0;pointer-events:none;text-shadow:0 0 6px #2795ff55}
 .xp-sparkles{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
 .xp-sparkles i{display:none;position:absolute;width:var(--spark-size,2px);height:var(--spark-size,2px);border-radius:50%;background:#fff;box-shadow:-2px 0 2px #fff2}
 .earning .xp-sparkles i{display:block;animation:xp-spark var(--spark-time,1s) var(--spark-delay,0s) linear infinite}
@@ -62,3 +67,11 @@ body:has(dialog[open]){overflow:hidden}
 @media(max-width:700px){.player-modal{height:96dvh;max-height:96dvh;width:98vw}.watch-shell{overflow-y:auto}.watch-top{padding:0 10px;gap:6px;position:sticky;top:0;z-index:2;background:var(--surface)}.watch-top .watch-button{font-size:10px;padding:8px 7px}.watch-top .icon-button{width:28px}.watch-wordmark small{display:none}.watch-wordmark{font-size:18px}.watch-layout{display:flex;flex-direction:column;height:auto}.watch-side{border-left:0;border-top:1px solid var(--border)}.player-modal .player-slot{max-height:none;min-height:170px}.watch-side-tabs{margin-bottom:18px}.watch-message{font-size:10px}.watch-top-actions{gap:4px}.player-modal.theater .watch-side{display:block}.player-modal.theater .watch-layout{display:flex}.player-modal.is-large{width:100vw;height:100dvh;max-height:none}.watch-description{margin-top:24px}}
 @media(prefers-reduced-motion:reduce){.earning .xp-progress i{animation:none;display:none}}.reduce-motion .earning .xp-progress i{animation:none;display:none}
 @media(max-width:700px){.watch-layout>.watch-description{margin:0;padding:24px 14px;border-top:1px solid var(--border)}}
+.xp-help[hidden]{display:none}
+.chat-theme-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);gap:12px}
+.chat-theme-label select{background:var(--raised);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:6px}
+#chat-slot iframe{color-scheme:only light}
+.account-settings{padding:6px 0 24px;border-bottom:1px solid var(--border);margin-bottom:8px}.account-settings h3{font-size:16px;margin:12px 0}
+#profile-form>label{display:block;margin-top:18px;font-size:12px}#profile-form>input,#profile-form>textarea{box-sizing:border-box;width:100%;margin-top:8px;border:1px solid var(--border);border-radius:8px;background:var(--raised);color:var(--text);padding:10px 12px;font:inherit;font-size:13px;resize:vertical}
+#profile-form small,.profile-public-note{display:block;font-size:11px;color:var(--muted);line-height:1.8;margin-top:6px}#profile-form .profile-visible{display:flex;align-items:center;gap:8px}.profile-visible input{accent-color:var(--accent)}
+#profile-form input:disabled,#profile-form textarea:disabled{opacity:.5}.profile-form-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.profile-form-actions [hidden]{display:none}#profile-status{font-size:12px;line-height:1.8;color:var(--muted)}

@@ -1,7 +1,7 @@
 import { levelProgress } from './levels.mjs';
 (() => {
   const roots = [...document.querySelectorAll('[data-xp-widget]')];
-  for (const root of roots) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Activity level <span data-level-text>1</span></strong><span data-xp-total>0 XP saved</span></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"></span><i></i><i></i><i></i></div><label class="activity-label">Activity window <span>5 XP / min</span></label><input class="activity-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><p class="xp-help">Sign in to earn activity XP.</p><span class="xp-error" role="status"></span><button class="xp-delete" type="button" disabled>Delete my activity data</button>`;
+  for (const root of roots) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Activity level <span data-level-text>1</span></strong><span data-xp-total>0 XP saved</span></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"></span><i></i><i></i><i></i></div><label class="activity-label">Activity window <span>5 XP / min</span></label><input class="activity-slider" type="range" min="0" max="100" value="0" step="0.01" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><p class="xp-help">Sign in to earn activity XP.</p><span class="xp-error" role="status"></span><button class="xp-delete" type="button" disabled>Delete my activity data</button>`;
   let state = null, receivedAt = 0, available = false, busy = false, userId = null, generation = 0, expiryAttempted = false;
   const pendingIds = {};
   let channel; try { channel = new BroadcastChannel('wlng-xp'); } catch { /* optional */ }
@@ -21,7 +21,7 @@ import { levelProgress } from './levels.mjs';
       root.dataset.tier = level >= 50 ? 'black' : level >= 25 ? 'red' : level >= 10 ? 'yellow' : 'blue';
       root.querySelector('[data-level]').textContent = level;
       root.querySelector('[data-level-text]').textContent = level;
-      root.querySelector('[data-xp-total]').textContent = `${projected.toFixed(1)} XP${active ? '' : ' saved'}`;
+      root.querySelector('[data-xp-total]').textContent = `${projected.toFixed(1)} XP${active || projected > (state?.savedXp || 0) + .0001 ? '' : ' saved'}`;
       root.querySelector('[data-xp-timer]').textContent = active ? `${Math.ceil(remaining / 60000)}m left` : 'Idle';
       const progress = root.querySelector('.xp-progress');
       const percent = intoLevel / required * 100;

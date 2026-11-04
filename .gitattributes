@@ -1,0 +1,2 @@
+# Generated bundle contains intentional whitespace in template-string literals.
+assets/vendor/supabase.mjs -whitespace linguist-vendored

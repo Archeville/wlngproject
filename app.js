@@ -1,4 +1,4 @@
-import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
+import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-operapip1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
@@ -109,6 +109,8 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
   new ResizeObserver(()=>{if(innerWidth>700&&!draggingPanel)applyPanelWidth();}).observe(watchLayout);applyPanelWidth();
   let pipSession=null,pipGeneration=0,pipOpening=false,pipFallbackNext=false;
   const pipButton=$('#watch-pip');
+  const operaBrowser=isOperaBrowser(navigator.userAgent,navigator.userAgentData?.brands||[],typeof window.opr!=='undefined');
+  $('#opera-pip-note').hidden=!operaBrowser;
   const pipStatus=text=>{const status=$('#pip-status');status.textContent=text;status.hidden=!text;};
   function restorePip(session){if($('#player-dialog').open&&state.playerId===session.id)$('#player-slot').replaceChildren(session.frame);}
   function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);pipStatus('Player returned to WLNG.');}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='PIP';}

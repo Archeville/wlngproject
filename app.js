@@ -80,11 +80,11 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
   }
   function play(id) {
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
-    closePip(false);
+    closePip(false);pipStatus('');
     $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); renderRelated(item); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
-    const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
+    const frame = document.createElement('iframe'); frame.src = new URL('player-embed.html?video='+encodeURIComponent(id),location.href).href; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
   }
   function renderRelated(item) {
     const label=item.channel?.org==='Independents'?'Indie':item.channel?.org;
@@ -107,26 +107,31 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
   panelResizer.addEventListener('dblclick',()=>savePanelWidth(310));
   panelResizer.addEventListener('keydown',event=>{const width=Number(panelResizer.getAttribute('aria-valuenow'));if(event.key==='ArrowLeft'){event.preventDefault();savePanelWidth(width+24);}else if(event.key==='ArrowRight'){event.preventDefault();savePanelWidth(width-24);}else if(event.key==='Home'){event.preventDefault();savePanelWidth(240);}else if(event.key==='End'){event.preventDefault();savePanelWidth(panelBounds().max);}});
   new ResizeObserver(()=>{if(innerWidth>700&&!draggingPanel)applyPanelWidth();}).observe(watchLayout);applyPanelWidth();
-  let pipSession=null,pipGeneration=0,pipOpening=false;
+  let pipSession=null,pipGeneration=0,pipOpening=false,pipFallbackNext=false;
   const pipButton=$('#watch-pip');
+  const pipStatus=text=>{const status=$('#pip-status');status.textContent=text;status.hidden=!text;};
   function restorePip(session){if($('#player-dialog').open&&state.playerId===session.id)$('#player-slot').replaceChildren(session.frame);}
-  function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='PIP';}
+  function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);pipStatus('Player returned to WLNG.');}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='PIP';}
   pipButton.addEventListener('click',async()=>{
     if(pipSession){closePip();return;}if(pipOpening)return;
-    if(!window.documentPictureInPicture?.requestWindow){$('#watch-message').textContent='Your browser does not support this floating player. Use its video pop-out control, if available.';return;}
     const frame=$('#player-slot iframe');if(!frame)return;
-    const id=state.playerId,generation=++pipGeneration;pipOpening=true;pipButton.disabled=true;
+    const id=state.playerId,generation=++pipGeneration;let openingWindow;pipOpening=true;pipButton.disabled=true;
     try{
-      const floating=await window.documentPictureInPicture.requestWindow({width:640,height:400});
+      const native=Boolean(window.documentPictureInPicture?.requestWindow)&&!pipFallbackNext;
+      const floating=native?await window.documentPictureInPicture.requestWindow({width:640,height:400}):window.open('about:blank','wlng-video-popout','popup,width=640,height=400,resizable=yes,scrollbars=no');
+      openingWindow=floating;
+      if(!floating){pipStatus('The browser blocked the pop-out. Allow pop-ups for WLNG and click PIP again.');return;}
+      if(!native)floating.opener=null;
       if(generation!==pipGeneration||!$('#player-dialog').open){floating.close();return;}
+      if(floating.closed)throw Error('Window closed');
       const doc=floating.document;doc.title='WLNG · '+($('#player-title').textContent||'Player');
       const style=doc.createElement('style');style.textContent='html,body{margin:0;width:100%;height:100%;background:#09090b;color:#eee;font:12px system-ui}body{display:flex;flex-direction:column}header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;min-height:28px}header span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}button{background:#25252c;border:1px solid #555;color:white;border-radius:5px;padding:5px 9px;cursor:pointer;flex-shrink:0}iframe{width:100%;min-height:200px;flex:1;border:0}';doc.head.append(style);
-      const header=doc.createElement('header'),title=doc.createElement('span'),back=doc.createElement('button');title.textContent=$('#player-title').textContent;back.textContent='Return to WLNG';back.addEventListener('click',()=>closePip());header.append(title,back);doc.body.append(header,frame);
-      const session={window:floating,frame,id};pipSession=session;
-      const note=document.createElement('p');note.className='pip-placeholder';note.textContent='Playing in picture in picture. Use the button above to return.';$('#player-slot').replaceChildren(note);
-      pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','true');$('#watch-message').textContent='Picture in picture is open. The YouTube player may reload when moving between windows.';
-      floating.addEventListener('pagehide',()=>{if(pipSession!==session)return;pipSession=null;restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','false');},{once:true});
-    }catch{$('#watch-message').textContent='Could not open picture in picture. Try leaving fullscreen, or use your browser’s video pop-out control.';}
+      const header=doc.createElement('header'),title=doc.createElement('span'),back=doc.createElement('button');title.textContent=$('#player-title').textContent;back.textContent='Return to WLNG';back.addEventListener('click',()=>closePip());header.append(title,back);doc.body.replaceChildren(header,frame);
+      const session={window:floating,frame,id,native};pipSession=session;
+      const note=document.createElement('p');note.className='pip-placeholder';note.textContent=native?'Playing in PIP. Click PIP to return.':'Playing in a pop-out window. Click PIP to return.';$('#player-slot').replaceChildren(note);
+      pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','true');pipStatus(native?'PIP opened. You may need to press Play again.':'Pop-out opened. For always-on-top in Opera/GX, hover the video and click Opera’s Video Popout button.');
+      floating.addEventListener('pagehide',event=>{if(event.target!==doc||pipSession!==session)return;pipSession=null;restorePip(session);pipStatus('Player returned to WLNG.');pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','false');},{once:true});
+    }catch{if(openingWindow){try{if(frame.ownerDocument!==document&&$('#player-dialog').open&&state.playerId===id)$('#player-slot').replaceChildren(frame);openingWindow.close();}catch{}}pipSession=null;pipButton.setAttribute('aria-pressed','false');pipFallbackNext=true;pipStatus('PIP could not open. Click PIP again to try a resizable pop-out window.');}
     finally{pipOpening=false;pipButton.disabled=false;}
   });
   const descriptionCache = new Map();

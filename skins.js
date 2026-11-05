@@ -1,12 +1,26 @@
-import {barSkins,themeSkins,skinPaint} from './cosmetics.mjs';
+import {barSkins,themeSkins,badgeSkins,skinPaint,badgeStyle} from './cosmetics.mjs?v=20261105-account1';
+import {accountState} from './account-state.mjs';
 (() => {
- const dialog=document.querySelector('#skins-dialog'),status=document.querySelector('#skin-status');
- let user=null,skin='blue',theme='none',level=1,busy=false,generation=0,loaded=false;
- function apply(){document.documentElement.style.setProperty('--xp-skin',skinPaint(skin,level));document.documentElement.dataset.skinTheme=theme;}
- function group(selector,choices,current,field){const list=document.querySelector(selector);list.replaceChildren();for(const [id,name,unlock,color] of choices){const button=document.createElement('button');button.type='button';button.className='skin-card';button.disabled=busy||!user||!loaded||level<unlock;button.setAttribute('aria-pressed',String(current===id));const label=document.createElement('strong');label.textContent=name;const sample=document.createElement('span');sample.className='skin-preview';sample.style.setProperty('--preview',color);const note=document.createElement('small');note.textContent=current===id?'Equipped':level<unlock?'Unlocks at level '+unlock:'Level '+unlock+' · Equip';button.append(label,sample,note);button.addEventListener('click',()=>void request({[field]:id}));list.append(button);}}
- function draw(){group('#skin-options',barSkins,skin,'skin');group('#theme-skin-options',themeSkins,theme,'theme');}
- async function request(next){if(!user||busy)return;const own=generation;busy=true;draw();status.textContent=next?'Saving…':'Loading skins…';try{const token=await window.WLNG_AUTH?.getAccessToken();if(!token)throw Error('Please sign in.');const r=await fetch(new URL('/api/account/skin',window.WLNG_CONFIG.apiBase),{method:next?'POST':'GET',headers:{Authorization:'Bearer '+token,...(next?{'Content-Type':'application/json'}:{})},...(next?{body:JSON.stringify(next)}:{}),signal:AbortSignal.timeout(15000)});const data=await r.json();if(own!==generation)return;if(!r.ok)throw Error(data.error||'Could not load skins.');skin=data.skin;theme=data.theme||'none';level=Math.max(data.level,window.WLNG_LEVEL||1);loaded=true;apply();status.textContent=next?'Equipped.':'';}catch(e){if(own===generation)status.textContent=e.message;}finally{busy=false;draw();if(own!==generation&&user)void request();}}
- document.querySelector('#skins-open').addEventListener('click',()=>{draw();if(user&&!loaded)void request();else if(!user)status.textContent='Sign in to equip skins.';});
- function auth(e){if(user===e.detail.userId)return;user=e.detail.userId;generation++;skin='blue';theme='none';level=1;loaded=false;apply();draw();status.textContent=user?'':'Sign in to equip skins.';if(user)setTimeout(()=>void request(),0);}
- window.addEventListener('wlng-auth',auth);window.addEventListener('wlng-level',e=>{level=e.detail.level;if(!barSkins.some(x=>x[0]===skin&&level>=x[2]))skin='blue';if(!themeSkins.some(x=>x[0]===theme&&level>=x[2]))theme='none';apply();draw();});if(Object.hasOwn(window,'WLNG_AUTH_USER'))auth({detail:{userId:window.WLNG_AUTH_USER}});apply();draw();
+ const dialog=document.querySelector('#skins-dialog'),status=document.querySelector('#skin-status'),applyButton=document.querySelector('#skins-apply'),revert=document.querySelector('#skins-revert');
+ let user=null,equipped={skin:'blue',theme:'none',badge:'auto'},draft={...equipped},level=1,busy=false,loaded=false,previewing=false;
+ const dirty=()=>draft.skin!==equipped.skin||draft.theme!==equipped.theme||draft.badge!==equipped.badge;
+ function paint(){window.WLNG_BADGE_PREVIEW=dialog.open&&previewing?draft.badge:undefined;document.documentElement.style.setProperty('--xp-skin',skinPaint(draft.skin,level));document.documentElement.dataset.skinTheme=draft.theme;for(const badge of document.querySelectorAll('[data-level]'))badge.className='level-badge level-icon badge-'+badgeStyle(draft.badge,level);}
+ function group(selector,choices,field){const list=document.querySelector(selector);list.replaceChildren();for(const [id,name,unlock,color] of choices){const button=document.createElement('button');button.type='button';button.className='skin-card';button.disabled=busy||!user||!loaded||level<unlock;button.setAttribute('aria-pressed',String(draft[field]===id));const label=document.createElement('strong');label.textContent=name;const sample=document.createElement('span');sample.className=field==='badge'?'level-icon skin-badge-preview badge-'+(id==='auto'?badgeStyle(id,level):id):'skin-preview';if(field==='badge')sample.textContent=level;else sample.style.setProperty('--preview',color);const note=document.createElement('small');note.textContent=level<unlock?'Unlocks at level '+unlock:draft[field]===id?(equipped[field]===id?'Equipped':'Preview'):'Level '+unlock+' · Preview';button.append(label,sample,note);button.addEventListener('click',()=>{if(draft[field]===id)return;draft={...draft,[field]:id};previewing=true;paint();draw();status.textContent=dirty()?'Preview only. Apply to save.':'';});list.append(button);}}
+ function draw(){group('#skin-options',barSkins,'skin');group('#theme-skin-options',themeSkins,'theme');group('#badge-skin-options',badgeSkins,'badge');applyButton.disabled=!user||!loaded||busy||!dirty();revert.disabled=!dirty()||busy;}
+ function reset(){draft={...equipped};previewing=false;paint();draw();}
+ applyButton.addEventListener('click',async()=>{if(applyButton.disabled)return;const input={};for(const field of ['skin','theme','badge'])if(draft[field]!==equipped[field])input[field]=draft[field];const ownUser=user;try{await accountState.saveCosmetics(input);if(user===ownUser){reset();status.textContent=accountState.view().error||'Appearance saved.';}}catch(e){if(user===ownUser)status.textContent=e.message;}});
+ revert.addEventListener('click',()=>{reset();status.textContent='Preview reverted.';});
+ dialog.addEventListener('close',()=>{reset();status.textContent='';});
+ document.querySelector('#skins-open').addEventListener('click',()=>{reset();if(user&&!loaded)void accountState.load();else if(!user)status.textContent='Sign in to equip skins.';});
+ accountState.subscribe(view=>{
+   const changedUser=user!==view.userId;user=view.userId;busy=view.busy;loaded=Boolean(view.record);
+   if(changedUser){previewing=false;equipped={skin:'blue',theme:'none',badge:'auto'};level=1;}
+   const cosmetics=view.record?.data.cosmetics;
+   if(cosmetics){equipped={skin:cosmetics.skin,theme:cosmetics.theme,badge:cosmetics.badge||'auto'};level=Math.max(cosmetics.level,window.WLNG_LEVEL||1);}
+   if(!previewing||changedUser)draft={...equipped};
+   if(view.error)status.textContent=view.error;else if(!user)status.textContent='Sign in to equip skins.';
+   paint();draw();
+ });
+ window.addEventListener('wlng-level',event=>{level=event.detail.level;for(const [field,choices,fallback] of [['skin',barSkins,'blue'],['theme',themeSkins,'none'],['badge',badgeSkins,'auto']]){if(!choices.some(x=>x[0]===draft[field]&&level>=x[2]))draft[field]=fallback;}paint();draw();});
+ paint();draw();
 })();

@@ -19,6 +19,7 @@
   function openDialog(dialog) {
     if (dialog.open) return;
     dialog.showModal();
+    if(dialog.id==='settings-dialog')window.dispatchEvent(new Event('wlng-settings-open'));
     animate(dialog, [{ opacity: 0, transform: 'translateY(20px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 340 });
   }
   function closeDialog(dialog) {

@@ -1,11 +1,10 @@
 import { levelProgress } from './levels.mjs';
+import { badgeStyle } from './cosmetics.mjs?v=20261105-account1';
+import { accountState } from './account-state.mjs';
 (() => {
   const roots = [...document.querySelectorAll('[data-xp-widget]')];
-  for (const root of roots) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Level <span data-level-text>1</span></strong></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"><span class="xp-sparkles" aria-hidden="true"></span></span><span class="xp-progress-label" data-xp-label>0 / 100 XP</span></div><div class="activity-control"><input class="activity-slider" type="range" min="0" max="100" value="0" step="0.01" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><span class="slider-burst" aria-hidden="true"></span><span class="slider-direction" aria-hidden="true">←</span></div><p class="xp-help">Sign in to earn activity XP.</p><span class="xp-error" role="status"></span>`;
-  let state = null, receivedAt = 0, available = false, busy = false, userId = null, generation = 0, expiryAttempted = false;
-  const pendingIds = {};
-  let hintExpiresAt = 0, hintMessage = "";
-  function activityHint(refilled) { hintExpiresAt = performance.now() + 5000; hintMessage = refilled ? "Slide right to refill. Video playback is unrelated." : "Activity window ended. Slide right to refill."; }
+  for (const [widgetIndex,root] of roots.entries()) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Level <span data-level-text>1</span></strong></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"><span class="xp-sparkles" aria-hidden="true"></span></span><span class="xp-progress-label" data-xp-label>0 / 100 XP</span></div><div class="activity-row"><div class="activity-control"><input class="activity-slider" type="range" min="0" max="100" value="0" step="0.01" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><span class="slider-burst" aria-hidden="true"></span><span class="slider-direction" aria-hidden="true">←</span></div><button class="xp-info" type="button" aria-label="How the XP slider works" aria-expanded="false" aria-controls="xp-info-${widgetIndex}">?</button></div><p id="xp-info-${widgetIndex}" class="xp-explainer" hidden>Refill the slider every 30 minutes to keep earning XP. You can activate it without watching a video. XP only unlocks cosmetics and badges; it grants no other rewards.</p><p class="xp-help">Sign in to earn XP.</p><span class="xp-error" role="status"></span>`;
+  let state = null, receivedAt = 0, available = false, busy = false, userId = null, expiryNotified = true;
   function refillArrow() { for (const root of roots) { const arrow = root.querySelector(".slider-direction"); const distance = Math.max(0, root.querySelector(".activity-control").clientWidth - 32); arrow.getAnimations().forEach(animation => animation.cancel()); arrow.animate(reducedMotion() ? [{opacity:1},{opacity:0}] : [{opacity:0,transform:"translateX(0)"},{opacity:1,offset:.15},{opacity:0,transform:"translateX(-"+distance+"px)"}],{duration:850,easing:"ease-out"}); } }
   const dangerZone = document.querySelector('#danger-zone'), dangerActions = document.querySelector('#danger-actions'), unlockButton = document.querySelector('#danger-unlock'), deleteButton = document.querySelector('#xp-delete');
   let dangerUnlocked = false, holdFrame = null, holdStartedAt = null;
@@ -40,16 +39,13 @@ import { levelProgress } from './levels.mjs';
   window.addEventListener('blur', cancelHold);
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelHold(); });
   document.querySelector('#settings-dialog').addEventListener('close', lockDanger);
-  deleteButton.addEventListener('click', () => { if (dangerUnlocked && available && !busy && confirm('Delete all your WLNG activity XP and stop the active window? This cannot be undone. Your Google account and video playback are unaffected.')) void send('delete'); });
-  let channel; try { channel = new BroadcastChannel('wlng-xp'); } catch { /* optional */ }
+  deleteButton.addEventListener('click', () => { if (dangerUnlocked && available && !busy && confirm('Delete all your WLNG activity XP and stop the active window? This cannot be undone. Your Google account and video playback are unaffected.')) void accountState.mutate('delete'); });
   const estimatedNow = () => state ? state.serverNow + Math.max(0, performance.now() - receivedAt) : 0;
   const error = text => { roots.forEach(root => { root.querySelector('.xp-error').textContent = text; }); document.querySelector('#danger-status').textContent = text; };
   function draw() {
     const now = estimatedNow();
     const active = available && state && now < state.endsAt;
-    // On reload start at the last saved total, as requested. The authoritative
-    // outstanding portion is reconciled when the window is settled/refilled.
-    const projected = (state?.savedXp || 0) + (state?.endsAt ? Math.max(0, Math.min(now, state.endsAt) - state.serverNow) * state.xpPerMinute / 60000 : 0);
+    const projected = (state?.currentXp ?? state?.savedXp ?? 0) + (state?.endsAt ? Math.max(0, Math.min(now, state.endsAt) - state.serverNow) * state.xpPerMinute / 60000 : 0);
     const { level, intoLevel, required } = levelProgress(projected);
     if(window.WLNG_LEVEL!==level){window.WLNG_LEVEL=level;window.dispatchEvent(new CustomEvent('wlng-level',{detail:{level}}));}
     const remaining = active ? Math.max(0, state.endsAt - now) : 0;
@@ -57,6 +53,7 @@ import { levelProgress } from './levels.mjs';
     for (const root of roots) {
       root.classList.toggle('earning', Boolean(active));
       root.dataset.tier = level >= 50 ? 'black' : level >= 25 ? 'red' : level >= 10 ? 'yellow' : 'blue';
+      root.querySelector('[data-level]').className='level-badge level-icon badge-'+badgeStyle(window.WLNG_BADGE_PREVIEW??state?.cosmetics?.badge,level);
       root.querySelector('[data-level]').textContent = level;
       root.querySelector('[data-level-text]').textContent = level;
       root.querySelector('[data-xp-label]').textContent = `${intoLevel.toFixed(1)} / ${required} XP`;
@@ -74,50 +71,31 @@ import { levelProgress } from './levels.mjs';
       slider.style.setProperty('--charge', `${displayRatio * 100}%`);
       slider.style.setProperty('--charge-color', dragging || ratio > .5 ? '#4aa7ff' : ratio > .2 ? '#eac44e' : '#ec646e');
       slider.setAttribute('aria-valuetext', active ? `${Math.ceil(remaining / 60000)} minutes remaining. Slide right to refill.` : 'Slide right to start 30 minutes.');
-      const hint = !userId ? 'Sign in to earn XP.' : performance.now() < hintExpiresAt ? hintMessage : ''; root.querySelector('.xp-help').textContent = hint; root.querySelector('.xp-help').hidden = !hint;
+      const hint = !userId ? 'Sign in to earn XP.' : ''; root.querySelector('.xp-help').textContent = hint; root.querySelector('.xp-help').hidden = !hint;
     }
+    if(available&&state?.endsAt&&now>=state.endsAt&&!expiryNotified){expiryNotified=true;burst();}
     dangerActions.disabled = !dangerUnlocked || !available || busy; deleteButton.disabled = dangerActions.disabled;
-    if (available && state?.endsAt && now >= state.endsAt && !expiryAttempted && !busy) { expiryAttempted = true; activityHint(false); burst(); void send('settle'); }
-  }
-  async function request(action, token) {
-    const response = await fetch(new URL(`/api/xp/${action}`, window.WLNG_CONFIG.apiBase), {
-      method: action === 'state' ? 'GET' : 'POST',
-      headers: { Authorization: `Bearer ${token}`, ...(action === 'state' ? {} : { 'Content-Type': 'application/json' }) },
-      ...(action === 'state' ? {} : { body: JSON.stringify({ requestId: pendingIds[action] ||= crypto.randomUUID() }) }),
-      signal: AbortSignal.timeout(15000)
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Activity XP could not be saved.');
-    return data;
-  }
-  async function send(action = 'state') {
-    if (busy) return;
-    const ownGeneration = generation; busy = true; draw(); error('');
-    try {
-      const token = await window.WLNG_AUTH?.getAccessToken();
-      if (!token) throw new Error('Sign in to earn activity XP.');
-      const data = await request(action, token);
-      if (ownGeneration !== generation) return;
-      state = data; receivedAt = performance.now(); available = true;
-      if (action === 'start') { activityHint(true); draw(); burst(); refillArrow(); }
-      if (action !== 'state') { delete pendingIds[action]; channel?.postMessage({ userId }); }
-      expiryAttempted = Boolean(state.endsAt && state.endsAt <= state.serverNow);
-    } catch (failure) { if (ownGeneration === generation) error(failure.message); }
-    finally { busy = false; draw(); if (ownGeneration !== generation && userId) void send(); }
   }
   for (const root of roots) {
+    const info=root.querySelector('.xp-info'),explainer=root.querySelector('.xp-explainer');
+    info.addEventListener('click',()=>{explainer.hidden=!explainer.hidden;info.setAttribute('aria-expanded',String(!explainer.hidden));});
     const slider = root.querySelector('.activity-slider');
     slider.addEventListener('input', () => { slider.style.setProperty('--charge', `${slider.value}%`); root.querySelector('.activity-control').style.setProperty('--charge', `${slider.value}%`); });
-    slider.addEventListener('change', () => { if (Number(slider.value) >= 99 && available && !busy) { expiryAttempted = false; void send('start'); } else draw(); });
+    slider.addEventListener('change', () => { if (Number(slider.value) >= 99 && available && !busy) { void accountState.mutate('start'); } else draw(); });
   }
-  function authChanged(event) {
-    if (event.detail.userId === userId) return;
-    userId = event.detail.userId; hintExpiresAt = 0; lockDanger(); generation++; state = null; available = false; expiryAttempted = false;
-    for (const key of Object.keys(pendingIds)) delete pendingIds[key];
-    draw(); if (userId) setTimeout(() => void send(), 0);
-  }
-  window.addEventListener('wlng-auth', authChanged);
-  if (Object.hasOwn(window, 'WLNG_AUTH_USER')) authChanged({detail:{userId:window.WLNG_AUTH_USER}});
-  if (channel) channel.onmessage = event => { if (userId && event.data.userId === userId) void send(); };
-  setInterval(draw, 100); draw();
+  let lastStart=null,lastRecord=null;
+  accountState.subscribe(view=>{
+    const changedUser=userId!==view.userId;
+    if(changedUser){userId=view.userId;lastRecord=null;lastStart=null;lockDanger();}
+    busy=view.busy;available=Boolean(view.record);state=view.record?.data||null;
+    if(view.record&&view.record!==lastRecord){
+      receivedAt=performance.now()-Math.max(0,Date.now()-view.record.receivedAt);
+      if(lastRecord&&state.startedAt!==lastStart&&state.startedAt){if(!document.hidden){burst();refillArrow();}}
+      lastRecord=view.record;lastStart=state.startedAt;expiryNotified=Boolean(!state.endsAt||state.endsAt<=state.serverNow);
+    }
+    error(view.error);if(!document.hidden)draw();
+  });
+  let drawTimer;
+  function resumeDraw(){clearInterval(drawTimer);if(!document.hidden){draw();drawTimer=setInterval(draw,100);}}
+  document.addEventListener('visibilitychange',resumeDraw);resumeDraw();
 })();

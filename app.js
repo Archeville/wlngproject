@@ -94,13 +94,23 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
     $('#related-lives-empty').hidden=matches.length>0;
   }
   $('#related-lives-list').addEventListener('click',event=>{const button=event.target.closest('[data-related-id]');if(button)play(button.dataset.relatedId);});
-  const panelButton=$('#watch-panel-size');
-  function setPanelWide(wide){$('#player-dialog').classList.toggle('panel-wide',wide);panelButton.setAttribute('aria-pressed',String(wide));panelButton.textContent=wide?'Standard panel':'Widen panel';pref('wlng-panel-wide',String(wide));}
-  setPanelWide(pref('wlng-panel-wide')==='true');panelButton.addEventListener('click',()=>setPanelWide(!$('#player-dialog').classList.contains('panel-wide')));
+  const panelResizer=$('#watch-resizer'),watchLayout=$('.watch-layout');
+  let preferredPanelWidth=Number(pref('wlng-panel-width'))||310,draggingPanel=false;
+  function panelBounds(){const width=watchLayout.clientWidth||innerWidth;return {min:240,max:Math.max(240,Math.min(640,width*.6,width-330))};}
+  function applyPanelWidth(width=preferredPanelWidth){const {min,max}=panelBounds();const actual=Math.round(Math.max(min,Math.min(max,width)));$('#player-dialog').style.setProperty('--side-width',actual+'px');panelResizer.setAttribute('aria-valuenow',String(actual));panelResizer.setAttribute('aria-valuemax',String(Math.floor(max)));return actual;}
+  function savePanelWidth(width){preferredPanelWidth=applyPanelWidth(width);pref('wlng-panel-width',String(preferredPanelWidth));}
+  function stopPanelDrag(){if(!draggingPanel)return;draggingPanel=false;$('#player-dialog').classList.remove('resizing-panel');savePanelWidth(Number(panelResizer.getAttribute('aria-valuenow')));}
+  panelResizer.addEventListener('pointerdown',event=>{if(event.button!==0)return;event.preventDefault();draggingPanel=true;panelResizer.setPointerCapture(event.pointerId);$('#player-dialog').classList.add('resizing-panel');});
+  panelResizer.addEventListener('pointermove',event=>{if(draggingPanel)applyPanelWidth(watchLayout.getBoundingClientRect().right-event.clientX-5);});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])panelResizer.addEventListener(event,stopPanelDrag);
+  window.addEventListener('blur',stopPanelDrag);
+  panelResizer.addEventListener('dblclick',()=>savePanelWidth(310));
+  panelResizer.addEventListener('keydown',event=>{const width=Number(panelResizer.getAttribute('aria-valuenow'));if(event.key==='ArrowLeft'){event.preventDefault();savePanelWidth(width+24);}else if(event.key==='ArrowRight'){event.preventDefault();savePanelWidth(width-24);}else if(event.key==='Home'){event.preventDefault();savePanelWidth(240);}else if(event.key==='End'){event.preventDefault();savePanelWidth(panelBounds().max);}});
+  new ResizeObserver(()=>{if(innerWidth>700&&!draggingPanel)applyPanelWidth();}).observe(watchLayout);applyPanelWidth();
   let pipSession=null,pipGeneration=0,pipOpening=false;
   const pipButton=$('#watch-pip');
   function restorePip(session){if($('#player-dialog').open&&state.playerId===session.id)$('#player-slot').replaceChildren(session.frame);}
-  function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='Picture in picture';}
+  function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='PIP';}
   pipButton.addEventListener('click',async()=>{
     if(pipSession){closePip();return;}if(pipOpening)return;
     if(!window.documentPictureInPicture?.requestWindow){$('#watch-message').textContent='Your browser does not support this floating player. Use its video pop-out control, if available.';return;}
@@ -114,8 +124,8 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
       const header=doc.createElement('header'),title=doc.createElement('span'),back=doc.createElement('button');title.textContent=$('#player-title').textContent;back.textContent='Return to WLNG';back.addEventListener('click',()=>closePip());header.append(title,back);doc.body.append(header,frame);
       const session={window:floating,frame,id};pipSession=session;
       const note=document.createElement('p');note.className='pip-placeholder';note.textContent='Playing in picture in picture. Use the button above to return.';$('#player-slot').replaceChildren(note);
-      pipButton.textContent='Return from PiP';pipButton.setAttribute('aria-pressed','true');$('#watch-message').textContent='Picture in picture is open. The YouTube player may reload when moving between windows.';
-      floating.addEventListener('pagehide',()=>{if(pipSession!==session)return;pipSession=null;restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';pipButton.textContent='Picture in picture';pipButton.setAttribute('aria-pressed','false');},{once:true});
+      pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','true');$('#watch-message').textContent='Picture in picture is open. The YouTube player may reload when moving between windows.';
+      floating.addEventListener('pagehide',()=>{if(pipSession!==session)return;pipSession=null;restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','false');},{once:true});
     }catch{$('#watch-message').textContent='Could not open picture in picture. Try leaving fullscreen, or use your browser’s video pop-out control.';}
     finally{pipOpening=false;pipButton.disabled=false;}
   });
@@ -174,7 +184,7 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
       if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
     });
   });
-  $('#player-dialog').addEventListener('close', () => { closePip(false); $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
+  $('#player-dialog').addEventListener('close', () => { stopPanelDrag();closePip(false); $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
   function showWatchPanel(panel) {
     $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
     document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });
@@ -198,7 +208,7 @@ import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
   });
   document.addEventListener('fullscreenchange', () => { const active = document.fullscreenElement === watchShell; fullscreenButton.textContent = active ? 'Exit fullscreen' : 'Fullscreen'; fullscreenButton.setAttribute('aria-pressed', String(active)); });
   $('#watch-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('#youtube-link').href); $('#watch-message').textContent = 'YouTube link copied.'; } catch { $('#watch-message').textContent = 'Copy the link using Open on YouTube.'; } });
-  $('#watch-dim').addEventListener('input', event => $('#player-dialog').style.setProperty('--watch-shade', 'rgba(0,0,0,' + Number(event.target.value) / 100 + ')'));
+  $('#watch-dim').addEventListener('input',event=>{const value=Number(event.target.value);$('#player-dialog').style.setProperty('--watch-shade','rgba(0,0,0,'+value/100+')');event.target.style.setProperty('--dim-fill',value/90*100+'%');$('#watch-dim-value').value=value+'%';event.target.setAttribute('aria-valuetext',value+'% darker');});
   document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea/i.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); $('#search').focus(); } });
   function setTheme(value) {
     const theme = ['white', 'black', 'black-purple'].includes(value) ? value : 'black';

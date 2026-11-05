@@ -1,3 +1,4 @@
+import { relatedLives } from './watch-utils.mjs?v=20261105-player1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
@@ -79,11 +80,45 @@
   }
   function play(id) {
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
-    $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
+    closePip(false);
+    $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); renderRelated(item); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     const frame = document.createElement('iframe'); frame.src = `https://www.youtube.com/embed/${id}?playsinline=1`; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
   }
+  function renderRelated(item) {
+    const label=item.channel?.org==='Independents'?'Indie':item.channel?.org;
+    $('#related-heading').textContent=label?label+' · Other live streams':'Other live streams';
+    const matches=relatedLives(state.streams,item);
+    $('#related-lives-list').innerHTML=matches.map(x=>'<button type="button" class="related-live" data-related-id="'+esc(x.id)+'"><img loading="lazy" src="https://i.ytimg.com/vi/'+esc(x.id)+'/mqdefault.jpg" alt=""><span><strong>'+esc(x.channel?.english_name||x.channel?.name||'Unknown channel')+'</strong><span>'+esc(x.title)+'</span><small>● LIVE'+(Number.isFinite(x.live_viewers)?' · '+new Intl.NumberFormat().format(x.live_viewers)+' watching':'')+'</small></span></button>').join('');
+    $('#related-lives-empty').hidden=matches.length>0;
+  }
+  $('#related-lives-list').addEventListener('click',event=>{const button=event.target.closest('[data-related-id]');if(button)play(button.dataset.relatedId);});
+  const panelButton=$('#watch-panel-size');
+  function setPanelWide(wide){$('#player-dialog').classList.toggle('panel-wide',wide);panelButton.setAttribute('aria-pressed',String(wide));panelButton.textContent=wide?'Standard panel':'Widen panel';pref('wlng-panel-wide',String(wide));}
+  setPanelWide(pref('wlng-panel-wide')==='true');panelButton.addEventListener('click',()=>setPanelWide(!$('#player-dialog').classList.contains('panel-wide')));
+  let pipSession=null,pipGeneration=0,pipOpening=false;
+  const pipButton=$('#watch-pip');
+  function restorePip(session){if($('#player-dialog').open&&state.playerId===session.id)$('#player-slot').replaceChildren(session.frame);}
+  function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='Picture in picture';}
+  pipButton.addEventListener('click',async()=>{
+    if(pipSession){closePip();return;}if(pipOpening)return;
+    if(!window.documentPictureInPicture?.requestWindow){$('#watch-message').textContent='Your browser does not support this floating player. Use its video pop-out control, if available.';return;}
+    const frame=$('#player-slot iframe');if(!frame)return;
+    const id=state.playerId,generation=++pipGeneration;pipOpening=true;pipButton.disabled=true;
+    try{
+      const floating=await window.documentPictureInPicture.requestWindow({width:640,height:400});
+      if(generation!==pipGeneration||!$('#player-dialog').open){floating.close();return;}
+      const doc=floating.document;doc.title='WLNG · '+($('#player-title').textContent||'Player');
+      const style=doc.createElement('style');style.textContent='html,body{margin:0;width:100%;height:100%;background:#09090b;color:#eee;font:12px system-ui}body{display:flex;flex-direction:column}header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;min-height:28px}header span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}button{background:#25252c;border:1px solid #555;color:white;border-radius:5px;padding:5px 9px;cursor:pointer;flex-shrink:0}iframe{width:100%;min-height:200px;flex:1;border:0}';doc.head.append(style);
+      const header=doc.createElement('header'),title=doc.createElement('span'),back=doc.createElement('button');title.textContent=$('#player-title').textContent;back.textContent='Return to WLNG';back.addEventListener('click',()=>closePip());header.append(title,back);doc.body.append(header,frame);
+      const session={window:floating,frame,id};pipSession=session;
+      const note=document.createElement('p');note.className='pip-placeholder';note.textContent='Playing in picture in picture. Use the button above to return.';$('#player-slot').replaceChildren(note);
+      pipButton.textContent='Return from PiP';pipButton.setAttribute('aria-pressed','true');$('#watch-message').textContent='Picture in picture is open. The YouTube player may reload when moving between windows.';
+      floating.addEventListener('pagehide',()=>{if(pipSession!==session)return;pipSession=null;restorePip(session);$('#watch-message').textContent='Player returned to WLNG.';pipButton.textContent='Picture in picture';pipButton.setAttribute('aria-pressed','false');},{once:true});
+    }catch{$('#watch-message').textContent='Could not open picture in picture. Try leaving fullscreen, or use your browser’s video pop-out control.';}
+    finally{pipOpening=false;pipButton.disabled=false;}
+  });
   const descriptionCache = new Map();
   async function loadDescription(item) {
     $('#player-description').textContent = 'Loading description…';
@@ -139,7 +174,7 @@
       if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
     });
   });
-  $('#player-dialog').addEventListener('close', () => { $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
+  $('#player-dialog').addEventListener('close', () => { closePip(false); $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
   function showWatchPanel(panel) {
     $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
     document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });

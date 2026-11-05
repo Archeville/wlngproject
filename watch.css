@@ -98,3 +98,5 @@ body:has(dialog[open]){overflow:hidden}
 .skins-save-panel{position:fixed;inset:auto;margin:0;width:200px;padding:16px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 36px #0008;font-size:12px}.skins-save-panel .profile-form-actions{margin-top:12px}#profile-colors[aria-pressed=true]{border-color:var(--accent);color:var(--accent-strong)}
 
 .watch-button[hidden]{display:none}
+
+#skins-dialog{width:min(92vw,760px);max-width:760px;box-sizing:border-box}@media(min-width:1000px){#skins-dialog #skin-options,#skins-dialog #theme-skin-options{grid-template-columns:repeat(3,minmax(0,1fr))}}

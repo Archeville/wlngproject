@@ -1,4 +1,4 @@
-import { skinPaint, badgeStyle, profileThemeCss } from './cosmetics.mjs?v=20261105-profilecolors1';
+import { skinPaint, badgeStyle, profileThemeCss } from './cosmetics.mjs?v=20261105-themes2';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);
 if(match){

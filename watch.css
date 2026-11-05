@@ -18,6 +18,7 @@ body:has(dialog[open]){overflow:hidden}
 .player-modal .player-info{width:100%;margin:0}.player-info h2{line-height:1.5;font-size:17px}.player-info p{color:var(--muted)}
 .watch-toolbar{padding:12px 0}.watch-dim{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:11px;color:var(--muted)}.watch-dim input{width:90px;accent-color:var(--accent)}
 .watch-message,.watch-note{font-size:12px;line-height:1.8;color:var(--muted)}.watch-message{margin:4px 0}
+.opera-pip-dialog{max-width:480px;max-height:calc(100dvh - 40px);overflow-y:auto;padding:24px}.opera-pip-dialog h2{font:600 22px 'Space Grotesk',sans-serif;margin:0}.opera-pip-dialog p,.opera-pip-dialog ol{font-size:13px;line-height:1.8;color:var(--muted)}.opera-pip-dialog ol{padding-left:22px}.opera-pip-dialog li+li{margin-top:8px}.opera-pip-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:24px}.opera-pip-actions .selected{font-weight:600}
 .watch-description{margin:32px 0 14px;padding-top:22px;border-top:1px solid var(--border)}
 .watch-description h3{font-size:14px;font-weight:600;margin:0 0 16px}
 #player-description{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);font-size:13px;line-height:1.9}

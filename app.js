@@ -110,11 +110,12 @@ import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-opera
   let pipSession=null,pipGeneration=0,pipOpening=false,pipFallbackNext=false;
   const pipButton=$('#watch-pip');
   const operaBrowser=isOperaBrowser(navigator.userAgent,navigator.userAgentData?.brands||[],typeof window.opr!=='undefined');
-  $('#opera-pip-note').hidden=!operaBrowser;
+  const operaPipDialog=$('#opera-pip-dialog');
   const pipStatus=text=>{const status=$('#pip-status');status.textContent=text;status.hidden=!text;};
   function restorePip(session){if($('#player-dialog').open&&state.playerId===session.id)$('#player-slot').replaceChildren(session.frame);}
   function closePip(restore=true){pipGeneration++;const session=pipSession;pipSession=null;if(session){if(restore){restorePip(session);pipStatus('Player returned to WLNG.');}session.window.close();}pipButton.setAttribute('aria-pressed','false');pipButton.textContent='PIP';}
-  pipButton.addEventListener('click',async()=>{
+  async function togglePip(){
+    if(!$('#player-dialog').open)return;
     if(pipSession){closePip();return;}if(pipOpening)return;
     const frame=$('#player-slot iframe');if(!frame)return;
     const id=state.playerId,generation=++pipGeneration;let openingWindow;pipOpening=true;pipButton.disabled=true;
@@ -135,7 +136,12 @@ import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-opera
       floating.addEventListener('pagehide',event=>{if(event.target!==doc||pipSession!==session)return;pipSession=null;restorePip(session);pipStatus('Player returned to WLNG.');pipButton.textContent='PIP';pipButton.setAttribute('aria-pressed','false');},{once:true});
     }catch{if(openingWindow){try{if(frame.ownerDocument!==document&&$('#player-dialog').open&&state.playerId===id)$('#player-slot').replaceChildren(frame);openingWindow.close();}catch{}}pipSession=null;pipButton.setAttribute('aria-pressed','false');pipFallbackNext=true;pipStatus('PIP could not open. Click PIP again to try a resizable pop-out window.');}
     finally{pipOpening=false;pipButton.disabled=false;}
+  }
+  pipButton.addEventListener('click',()=>{
+    if(operaBrowser&&!pipSession&&!pipOpening&&$('#player-slot iframe')){openDialog(operaPipDialog);return;}
+    void togglePip();
   });
+  $('#opera-pip-continue').addEventListener('click',()=>{operaPipDialog.close();void togglePip();});
   const descriptionCache = new Map();
   async function loadDescription(item) {
     $('#player-description').textContent = 'Loading description…';
@@ -191,7 +197,7 @@ import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-opera
       if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
     });
   });
-  $('#player-dialog').addEventListener('close', () => { stopPanelDrag();closePip(false); $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
+  $('#player-dialog').addEventListener('close', () => { if(operaPipDialog.open)operaPipDialog.close();stopPanelDrag();closePip(false); $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
   function showWatchPanel(panel) {
     $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
     document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });

@@ -1,4 +1,4 @@
-import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-operapip1';
+import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
@@ -109,7 +109,7 @@ import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-opera
   new ResizeObserver(()=>{if(innerWidth>700&&!draggingPanel)applyPanelWidth();}).observe(watchLayout);applyPanelWidth();
   let pipSession=null,pipGeneration=0,pipOpening=false,pipFallbackNext=false;
   const pipButton=$('#watch-pip');
-  const operaBrowser=isOperaBrowser(navigator.userAgent,navigator.userAgentData?.brands||[],typeof window.opr!=='undefined');
+  const operaGX=isOperaGXBrowser(navigator.userAgent,navigator.userAgentData?.brands||[]);
   const operaPipDialog=$('#opera-pip-dialog');
   const pipStatus=text=>{const status=$('#pip-status');status.textContent=text;status.hidden=!text;};
   function restorePip(session){if($('#player-dialog').open&&state.playerId===session.id)$('#player-slot').replaceChildren(session.frame);}
@@ -138,9 +138,11 @@ import { relatedLives, isOperaBrowser } from './watch-utils.mjs?v=20261105-opera
     finally{pipOpening=false;pipButton.disabled=false;}
   }
   pipButton.addEventListener('click',()=>{
-    if(operaBrowser&&!pipSession&&!pipOpening&&$('#player-slot iframe')){openDialog(operaPipDialog);return;}
+    if(!pipSession&&!pipOpening&&$('#player-slot iframe')){showPipHelp(operaGX);openDialog(operaPipDialog);return;}
     void togglePip();
   });
+  function showPipHelp(gx){$('#opera-pip-heading').textContent=gx?'Opera GX PIP':'Picture in Picture';$('#opera-pip-description').textContent=gx?'Please use Opera GX’s PIP button. Here’s how:':'For a smoother experience, please use a Picture in Picture extension directly. Website PIP has limitations we can’t fully control.';$('#opera-pip-steps').hidden=!gx;$('#opera-gx-help').hidden=gx;}
+  $('#opera-gx-help').addEventListener('click',()=>showPipHelp(true));
   $('#opera-pip-continue').addEventListener('click',()=>{operaPipDialog.close();void togglePip();});
   const descriptionCache = new Map();
   async function loadDescription(item) {

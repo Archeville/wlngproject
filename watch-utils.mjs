@@ -5,3 +5,5 @@ export function relatedLives(streams,current,now=Date.now()) {
 }
 
 export function isOperaBrowser(userAgent='',brands=[],hasOperaMarker=false){return hasOperaMarker||/\b(?:OPR|Opera|OPiOS|OPGX)\//i.test(userAgent)||brands.some(item=>/^Opera(?: GX)?$/i.test(item.brand||''));}
+
+export function isOperaGXBrowser(userAgent='',brands=[]){return /\b(?:OPGX\/|Opera[ /]GX\b)/i.test(userAgent)||brands.some(x=>/^Opera GX$/i.test(x.brand||''));}

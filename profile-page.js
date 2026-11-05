@@ -1,4 +1,4 @@
-import { skinPaint, badgeStyle } from './cosmetics.mjs?v=20261105-account1';
+import { skinPaint, badgeStyle, profileThemeCss } from './cosmetics.mjs?v=20261105-profilecolors1';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);
 if(match){
@@ -10,7 +10,7 @@ if(match){
       const p=data.profile;
       if(!p||!/^[a-z0-9_]{3,24}$/.test(p.username)||!Number.isInteger(p.level)||p.level<1||!Number.isFinite(p.xp)||!Number.isFinite(p.required)||p.required<=0||typeof p.description!=='string')throw new Error('Profile unavailable.');
       const canonical='/user/'+p.username;if(location.pathname!==canonical){location.replace(canonical);return;}
-      document.title='@'+p.username+' — WLNG';
+      document.title='@'+p.username+' — WLNG';const colors=document.createElement('style');colors.textContent=profileThemeCss(p.theme);document.head.append(colors);
       view.style.setProperty('--skin',skinPaint(p.skin,p.level));
       const top=document.createElement('div');top.className='profile-top';
       const badge=document.createElement('span');badge.className='badge level-icon badge-'+badgeStyle(p.badge,p.level);badge.textContent=p.level;

@@ -1,4 +1,4 @@
-import { skinPaint, badgeStyle, profileThemeCss } from './cosmetics.mjs?v=20261105-themes2';
+import { skinPaint, badgeStyle, profileThemeCss } from './cosmetics.mjs?v=20261106-pixelbadges1';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);
 if(match){
@@ -13,7 +13,7 @@ if(match){
       document.title='@'+p.username+' — WLNG';const colors=document.createElement('style');colors.textContent=profileThemeCss(p.theme);document.head.append(colors);
       view.style.setProperty('--skin',skinPaint(p.skin,p.level));
       const top=document.createElement('div');top.className='profile-top';
-      const badge=document.createElement('span');badge.className='badge level-icon badge-'+badgeStyle(p.badge,p.level);badge.textContent=p.level;
+      const badge=document.createElement('span');badge.className='badge level-icon badge-'+badgeStyle(p.badge,p.level);badge.textContent=p.level;badge.dataset.digits=String(p.level).length;
       const title=document.createElement('div'),name=document.createElement('h1'),level=document.createElement('small');name.textContent='@'+p.username;level.textContent='Level '+p.level;title.append(name,level);top.append(badge,title);
       const bar=document.createElement('div');bar.className='progress';bar.setAttribute('role','progressbar');bar.setAttribute('aria-label','XP for this level');bar.setAttribute('aria-valuenow',p.xp);bar.setAttribute('aria-valuemax',p.required);bar.setAttribute('aria-valuemin','0');
       const fill=document.createElement('div');fill.className='fill';fill.style.width=Math.max(0,Math.min(100,p.xp/p.required*100))+'%';const label=document.createElement('span');label.className='progress-label';label.textContent=p.xp.toFixed(1)+' / '+p.required+' XP';bar.append(fill,label);

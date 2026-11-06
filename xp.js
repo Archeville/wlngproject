@@ -1,5 +1,5 @@
 import { levelProgress } from './levels.mjs';
-import { badgeStyle } from './cosmetics.mjs?v=20261105-account1';
+import { badgeStyle } from './cosmetics.mjs?v=20261106-pixelbadges1';
 import { accountState } from './account-state.mjs';
 (() => {
   const roots = [...document.querySelectorAll('[data-xp-widget]')];
@@ -55,6 +55,7 @@ import { accountState } from './account-state.mjs';
       root.dataset.tier = level >= 50 ? 'black' : level >= 25 ? 'red' : level >= 10 ? 'yellow' : 'blue';
       root.querySelector('[data-level]').className='level-badge level-icon badge-'+badgeStyle(window.WLNG_BADGE_PREVIEW??state?.cosmetics?.badge,level);
       root.querySelector('[data-level]').textContent = level;
+      root.querySelector('[data-level]').dataset.digits = String(level).length;
       root.querySelector('[data-level-text]').textContent = level;
       root.querySelector('[data-xp-label]').textContent = `${intoLevel.toFixed(1)} / ${required} XP`;
       root.querySelector('[data-xp-timer]').textContent = active ? `${Math.floor(Math.ceil(remaining / 1000) / 60)}:${String(Math.ceil(remaining / 1000) % 60).padStart(2, '0')} left` : '00:00';

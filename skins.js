@@ -1,4 +1,4 @@
-import {barSkins,themeSkins,badgeSkins,skinPaint,badgeStyle,profileAwards} from './cosmetics.mjs?v=20261107-awards1';
+import {barSkins,themeSkins,badgeSkins,skinPaint,badgeStyle,profileAwards} from './cosmetics.mjs?v=20261107-friend1';
 import {accountState} from './account-state.mjs';
 (() => {
  const dialog=document.querySelector('#skins-dialog'),status=document.querySelector('#skin-status'),applyButton=document.querySelector('#skins-apply'),revert=document.querySelector('#skins-revert');

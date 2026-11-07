@@ -104,3 +104,5 @@ body:has(dialog[open]){overflow:hidden}
 .profile-awards{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 26px;align-items:center}.profile-award{display:block;width:128px;height:128px;object-fit:contain;image-rendering:pixelated;transform:scale(2);clip-path:inset(25%)}.award-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}.award-options img{width:128px;height:128px;object-fit:contain;image-rendering:pixelated;transform:scale(2);clip-path:inset(25%)}
 
 .profile-awards:empty{display:none}
+
+.profile-award[src$="/friend.png"],.award-options img[src$="/friend.png"]{transform:scale(1.12);clip-path:inset(8%)}

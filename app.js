@@ -50,6 +50,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   for(const id of ['filter-name','filter-viewers'])$('#'+id).addEventListener('input',()=>{if(state.updated)render();});
   $('#filters-clear').addEventListener('click',()=>{$('#filter-name').value='';$('#filter-viewers').value='0';if(state.updated)render();});
   function render() {
+    updateAgencyNavigation();
     const query = $('#search').value.trim().toLocaleLowerCase();
     const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
     const items = state.streams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && (!state.favoritesOnly || isFavorite(x)) && (state.org === 'all' || x.channel?.org === state.org) && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
@@ -167,8 +168,15 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   updateTabIndicator();
   $('#search').addEventListener('input', () => { if (state.updated) render(); });
   function updateAgencyNavigation(){
-    for(const link of document.querySelectorAll('.agency-link')){if(link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');}
-    $('#agency-current').textContent=state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org;
+    for(const link of document.querySelectorAll('.agency-link')){
+      if(link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
+      const name=link.dataset.org==='all'?'All':link.dataset.org==='Independents'?'Indie':link.dataset.org;
+      const live=state.streams.filter(x=>streamStatus(x)==='live'&&(link.dataset.org==='all'||x.channel?.org===link.dataset.org));
+      const count=new Set(live.map(x=>x.channel?.id||x.id)).size;
+      link.querySelector('.agency-live-count').textContent=state.updated?String(count):'—';
+      link.setAttribute('aria-label',state.updated?name+', '+count+' live channel'+(count===1?'':'s'):name);
+    }
+    $('#hub-toggle').title='Stream hub · '+(state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org);
   }
   updateAgencyNavigation();
   $('#hub-toggle').addEventListener('click',()=>{const expanded=$('#hub-toggle').getAttribute('aria-expanded')!=='true';$('#hub-toggle').setAttribute('aria-expanded',String(expanded));$('#agency-nav').hidden=!expanded;});

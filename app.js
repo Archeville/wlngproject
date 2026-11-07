@@ -53,8 +53,9 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     const query = $('#search').value.trim().toLocaleLowerCase();
     const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
     const items = state.streams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && (!state.favoritesOnly || isFavorite(x)) && (state.org === 'all' || x.channel?.org === state.org) && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
-    $('#live-count').textContent = state.streams.filter(x => streamStatus(x) === 'live').length;
-    $('#upcoming-count').textContent = state.streams.filter(x => streamStatus(x) === 'upcoming').length;
+    const agencyStreams=state.streams.filter(x=>state.org==='all'||x.channel?.org===state.org);
+    $('#live-count').textContent = agencyStreams.filter(x => streamStatus(x) === 'live').length;
+    $('#upcoming-count').textContent = agencyStreams.filter(x => streamStatus(x) === 'upcoming').length;
     $('#list-label').textContent = state.tab === 'live' ? 'LIVE RIGHT NOW' : 'COMING UP';
     $('#result-label').innerHTML = `${items.length} STREAM${items.length === 1 ? '' : 'S'} <b>✧</b>`;
     $('#grid').innerHTML = items.map(x => {
@@ -165,16 +166,20 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   document.fonts?.ready.then(updateTabIndicator);
   updateTabIndicator();
   $('#search').addEventListener('input', () => { if (state.updated) render(); });
-  document.querySelectorAll('.org-filter').forEach(item => { const active = item.dataset.org === state.org; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
+  function updateAgencyNavigation(){
+    for(const link of document.querySelectorAll('.agency-link')){if(link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');}
+    $('#agency-current').textContent=state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org;
+  }
+  updateAgencyNavigation();
+  $('#hub-toggle').addEventListener('click',()=>{const expanded=$('#hub-toggle').getAttribute('aria-expanded')!=='true';$('#hub-toggle').setAttribute('aria-expanded',String(expanded));$('#agency-nav').hidden=!expanded;});
   $('#default-org').value = state.org;
   $('#default-org').addEventListener('change', e => pref('wlng-default-org', e.target.value));
   $('#favorites-open').addEventListener('click', e => { state.favoritesOnly = !state.favoritesOnly; e.currentTarget.classList.toggle('selected', state.favoritesOnly); e.currentTarget.setAttribute('aria-pressed', String(state.favoritesOnly)); if (state.updated) render(); });
   $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) toggleFavorite(item); });
-  document.querySelectorAll('.org-filter').forEach(button => button.addEventListener('click', () => {
-    if (state.org === button.dataset.org) return;
-    state.org = button.dataset.org; updateFilters();
-    document.querySelectorAll('.org-filter').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
-    if (state.updated) render();
+  document.querySelectorAll('.agency-link').forEach(link=>link.addEventListener('click',()=>{
+    if(state.org===link.dataset.org)return;
+    state.org=link.dataset.org;updateFilters();updateAgencyNavigation();
+    if(state.updated)render();
   }));
   $('#grid').addEventListener('click', e => { const card = e.target.closest('[data-id]'); if (card) play(card.dataset.id); });
   $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-id]')) { e.preventDefault(); play(e.target.dataset.id); } });

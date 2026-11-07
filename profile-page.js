@@ -1,4 +1,4 @@
-import { skinPaint, badgeStyle, profileThemeCss } from './cosmetics.mjs?v=20261106-pixelbadges1';
+import { skinPaint, badgeStyle, profileThemeCss, profileAwards, awardCss } from './cosmetics.mjs?v=20261107-awards1';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);
 if(match){
@@ -10,14 +10,14 @@ if(match){
       const p=data.profile;
       if(!p||!/^[a-z0-9_]{3,24}$/.test(p.username)||!Number.isInteger(p.level)||p.level<1||!Number.isFinite(p.xp)||!Number.isFinite(p.required)||p.required<=0||typeof p.description!=='string')throw new Error('Profile unavailable.');
       const canonical='/user/'+p.username;if(location.pathname!==canonical){location.replace(canonical);return;}
-      document.title='@'+p.username+' — WLNG';const colors=document.createElement('style');colors.textContent=profileThemeCss(p.theme);document.head.append(colors);
+      document.title='@'+p.username+' — WLNG';const colors=document.createElement('style');colors.textContent=awardCss+profileThemeCss(p.theme);document.head.append(colors);
       view.style.setProperty('--skin',skinPaint(p.skin,p.level));
       const top=document.createElement('div');top.className='profile-top';
       const badge=document.createElement('span');badge.className='badge level-icon badge-'+badgeStyle(p.badge,p.level);badge.textContent=p.level;badge.dataset.digits=String(p.level).length;
       const title=document.createElement('div'),name=document.createElement('h1'),level=document.createElement('small');name.textContent='@'+p.username;level.textContent='Level '+p.level;title.append(name,level);top.append(badge,title);
       const bar=document.createElement('div');bar.className='progress';bar.setAttribute('role','progressbar');bar.setAttribute('aria-label','XP for this level');bar.setAttribute('aria-valuenow',p.xp);bar.setAttribute('aria-valuemax',p.required);bar.setAttribute('aria-valuemin','0');
       const fill=document.createElement('div');fill.className='fill';fill.style.width=Math.max(0,Math.min(100,p.xp/p.required*100))+'%';const label=document.createElement('span');label.className='progress-label';label.textContent=p.xp.toFixed(1)+' / '+p.required+' XP';bar.append(fill,label);
-      view.replaceChildren(top,bar);if(p.description){const bio=document.createElement('p');bio.className='description';bio.textContent=p.description;view.append(bio);}
+      const awards=document.createElement('section');awards.className='profile-awards';awards.setAttribute('aria-label','Profile badges');for(const id of (Array.isArray(p.profileBadges)?p.profileBadges:[]).slice(0,10)){const entry=profileAwards.find(x=>x[0]===id);if(!entry)continue;const img=document.createElement('img');img.className='profile-award';img.src='/assets/profile-badges/'+id+'.png';img.alt=entry[1];img.title=entry[1];awards.append(img);}view.replaceChildren(awards,top,bar);if(p.description){const bio=document.createElement('p');bio.className='description';bio.textContent=p.description;view.append(bio);}
       
     }catch(error){view.replaceChildren(Object.assign(document.createElement('h1'),{textContent:'Profile unavailable'}),Object.assign(document.createElement('p'),{textContent:error.message}));}
   })();

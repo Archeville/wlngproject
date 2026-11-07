@@ -100,3 +100,7 @@ body:has(dialog[open]){overflow:hidden}
 .watch-button[hidden]{display:none}
 
 #skins-dialog{width:min(92vw,760px);max-width:760px;box-sizing:border-box}@media(min-width:1000px){#skins-dialog #skin-options,#skins-dialog #theme-skin-options{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.profile-awards{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 26px;align-items:center}.profile-award{display:block;width:128px;height:128px;object-fit:contain;image-rendering:pixelated;transform:scale(2);clip-path:inset(25%)}.award-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}.award-options img{width:128px;height:128px;object-fit:contain;image-rendering:pixelated;transform:scale(2);clip-path:inset(25%)}
+
+.profile-awards:empty{display:none}

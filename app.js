@@ -84,6 +84,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
     closePip(false);pipStatus('');
     $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); renderRelated(item); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
+    const viewers=$('#player-viewers');const hasViewers=streamStatus(item)==='live'&&Number.isFinite(item.live_viewers)&&item.live_viewers>=0;viewers.hidden=!hasViewers;viewers.textContent=hasViewers?new Intl.NumberFormat().format(item.live_viewers)+' watching':'';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     const frame = document.createElement('iframe'); frame.src = new URL('player-embed.html?video='+encodeURIComponent(id),location.href).href; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);

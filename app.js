@@ -193,7 +193,6 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#grid').addEventListener('click', e => { const card = e.target.closest('[data-id]'); if (card) play(card.dataset.id); });
   $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-id]')) { e.preventDefault(); play(e.target.dataset.id); } });
   $('#skins-open').addEventListener('click',()=>openDialog($('#skins-dialog')));
-  $('#account-open').addEventListener('click', () => { openDialog($('#settings-dialog')); $('#settings-dialog').scrollTop = 0; });
   $('#settings-open').addEventListener('click', () => openDialog($('#settings-dialog')));
   $('#sidebar-settings').addEventListener('click', () => openDialog($('#settings-dialog')));
   const mobile = window.matchMedia('(max-width: 780px)');

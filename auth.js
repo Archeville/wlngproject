@@ -10,7 +10,7 @@ async function initializeAuth() {
     window.WLNG_AUTH = { getAccessToken: async () => (await client.auth.getSession()).data.session?.access_token || null };
     let signedIn = false;
     client.auth.onAuthStateChange((_event, session) => {
-      signedIn = Boolean(session); document.querySelector('#account-open').hidden = !session;
+      signedIn = Boolean(session);
       button.textContent = signedIn ? 'Sign out' : 'Sign in with Google';
       button.disabled = false;
       window.WLNG_AUTH_USER = session?.user?.id || null;

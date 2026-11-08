@@ -1,3 +1,5 @@
+/* Community link beside the wordmark. */
+.brand-area{flex:0 0 auto}.discord-link{display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;width:36px;height:36px;border-radius:8px}.discord-link img{display:block;width:30px;height:30px;object-fit:contain}.discord-link:hover{background:var(--hover)}.discord-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}@media(max-width:1024px){.discord-link{flex-basis:44px;width:44px;height:44px}}
 /* Touch layouts share the desktop colors, account state and stream feed. */
 .nav-shade,.mobile-account,.hub-agency{display:none}
 @media(max-width:1024px){

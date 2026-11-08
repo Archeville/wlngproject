@@ -19,6 +19,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   const closingDialogs = new WeakSet();
   function openDialog(dialog) {
     if (dialog.open) return;
+    closeMobileNavigation();
     dialog.showModal();
     if(dialog.id==='settings-dialog')window.dispatchEvent(new Event('wlng-settings-open'));
     animate(dialog, [{ opacity: 0, transform: 'translateY(20px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 340 });
@@ -87,6 +88,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     const viewers=$('#player-viewers');const hasViewers=streamStatus(item)==='live'&&Number.isFinite(item.live_viewers)&&item.live_viewers>=0;viewers.hidden=!hasViewers;viewers.textContent=hasViewers?new Intl.NumberFormat().format(item.live_viewers)+' watching':'';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
+    $('#chat-youtube-link').href = $('#youtube-link').href;
     const frame = document.createElement('iframe'); frame.src = new URL('player-embed.html?video='+encodeURIComponent(id),location.href).href; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
   }
   function renderRelated(item) {
@@ -109,7 +111,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   window.addEventListener('blur',stopPanelDrag);
   panelResizer.addEventListener('dblclick',()=>savePanelWidth(310));
   panelResizer.addEventListener('keydown',event=>{const width=Number(panelResizer.getAttribute('aria-valuenow'));if(event.key==='ArrowLeft'){event.preventDefault();savePanelWidth(width+24);}else if(event.key==='ArrowRight'){event.preventDefault();savePanelWidth(width-24);}else if(event.key==='Home'){event.preventDefault();savePanelWidth(240);}else if(event.key==='End'){event.preventDefault();savePanelWidth(panelBounds().max);}});
-  new ResizeObserver(()=>{if(innerWidth>700&&!draggingPanel)applyPanelWidth();}).observe(watchLayout);applyPanelWidth();
+  new ResizeObserver(()=>{if(innerWidth>1024&&!draggingPanel)applyPanelWidth();}).observe(watchLayout);applyPanelWidth();
   let pipSession=null,pipGeneration=0,pipOpening=false,pipFallbackNext=false;
   const pipButton=$('#watch-pip');
   const operaGX=isOperaGXBrowser(navigator.userAgent,navigator.userAgentData?.brands||[]);
@@ -169,6 +171,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   updateTabIndicator();
   $('#search').addEventListener('input', () => { if (state.updated) render(); });
   function updateAgencyNavigation(){
+    $('#hub-agency').textContent=state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org;
     for(const link of document.querySelectorAll('.agency-link')){
       if(link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
       const name=link.dataset.org==='all'?'All':link.dataset.org==='Independents'?'Indie':link.dataset.org;
@@ -183,9 +186,10 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#hub-toggle').addEventListener('click',()=>{const expanded=$('#hub-toggle').getAttribute('aria-expanded')!=='true';$('#hub-toggle').setAttribute('aria-expanded',String(expanded));$('#agency-nav').hidden=!expanded;});
   $('#default-org').value = state.org;
   $('#default-org').addEventListener('change', e => pref('wlng-default-org', e.target.value));
-  $('#favorites-open').addEventListener('click', e => { state.favoritesOnly = !state.favoritesOnly; e.currentTarget.classList.toggle('selected', state.favoritesOnly); e.currentTarget.setAttribute('aria-pressed', String(state.favoritesOnly)); if (state.updated) render(); });
+  $('#favorites-open').addEventListener('click', e => { state.favoritesOnly = !state.favoritesOnly; e.currentTarget.classList.toggle('selected', state.favoritesOnly); e.currentTarget.setAttribute('aria-pressed', String(state.favoritesOnly)); if (state.updated) render(); closeMobileNavigation(); });
   $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) toggleFavorite(item); });
   document.querySelectorAll('.agency-link').forEach(link=>link.addEventListener('click',()=>{
+    closeMobileNavigation();
     if(state.org===link.dataset.org)return;
     state.org=link.dataset.org;updateFilters();updateAgencyNavigation();
     if(state.updated)render();
@@ -195,13 +199,33 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#skins-open').addEventListener('click',()=>openDialog($('#skins-dialog')));
   $('#settings-open').addEventListener('click', () => openDialog($('#settings-dialog')));
   $('#sidebar-settings').addEventListener('click', () => openDialog($('#settings-dialog')));
-  const mobile = window.matchMedia('(max-width: 780px)');
+  const mobile = window.matchMedia('(max-width: 1024px)');
+  function closeMobileNavigation(returnFocus=false){
+    if(!mobile.matches||!document.body.classList.contains('nav-collapsed'))return;
+    document.body.classList.remove('nav-collapsed');updateNavigation();
+    if(returnFocus)$('#menu-toggle').focus();
+  }
   const updateNavigation = () => {
     const expanded = mobile.matches ? document.body.classList.contains('nav-collapsed') : !document.body.classList.contains('nav-collapsed');
     $('#menu-toggle').setAttribute('aria-expanded', String(expanded));
     $('#sidebar').inert = !expanded;
+    document.body.classList.toggle('mobile-nav-open',mobile.matches&&expanded);
+    $('.workspace').inert=mobile.matches&&expanded;
+    const auth=$('#auth-button');
+    if(mobile.matches)$('#mobile-account').append(auth);
+    else $('.header-right').insertBefore(auth,$('#settings-open'));
   };
-  $('#menu-toggle').addEventListener('click', () => { document.body.classList.toggle('nav-collapsed'); updateNavigation(); });
+  $('#menu-toggle').addEventListener('click', () => { document.body.classList.toggle('nav-collapsed'); updateNavigation(); if(mobile.matches&&document.body.classList.contains('nav-collapsed'))$('#hub-toggle').focus(); });
+  $('#nav-shade').addEventListener('click',()=>closeMobileNavigation(true));
+  $('#search').addEventListener('focus',()=>closeMobileNavigation());
+  document.addEventListener('keydown',event=>{
+    if(!mobile.matches||!document.body.classList.contains('nav-collapsed')||document.querySelector('dialog[open]'))return;
+    if(event.key==='Escape'){event.preventDefault();closeMobileNavigation(true);return;}
+    if(event.key!=='Tab')return;
+    const stops=[$('#menu-toggle'),...[...$('#sidebar').querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled)')].filter(el=>el.getClientRects().length&&!el.closest('[hidden],[inert]'))];
+    const index=stops.indexOf(document.activeElement),next=index<0?(event.shiftKey?stops.length-1:0):(index+(event.shiftKey?-1:1)+stops.length)%stops.length;
+    event.preventDefault();stops[next].focus();
+  });
   mobile.addEventListener('change', () => { document.body.classList.remove('nav-collapsed'); updateNavigation(); });
   updateNavigation();
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeDialog(document.getElementById(b.dataset.close))));
@@ -226,7 +250,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#watch-theater').addEventListener('click', event => { const active = $('#player-dialog').classList.toggle('theater'); event.currentTarget.setAttribute('aria-pressed', String(active)); });
   $('#watch-large').addEventListener('click', event => { const large = $('#player-dialog').classList.toggle('is-large'); event.currentTarget.textContent = large ? 'Popup' : 'Large'; event.currentTarget.setAttribute('aria-pressed', String(large)); });
   const fullscreenButton = $('#watch-fullscreen'), watchShell = $('#watch-shell');
-  const narrowWatch = matchMedia('(max-width: 700px)');
+  const narrowWatch = matchMedia('(max-width: 1024px)');
   function placeDescription() { (narrowWatch.matches ? $('.watch-layout') : $('#watch-main')).append($('.watch-description')); }
   narrowWatch.addEventListener('change', placeDescription); placeDescription();
   if (!document.fullscreenEnabled || !watchShell.requestFullscreen) { fullscreenButton.disabled = true; fullscreenButton.title = 'Native fullscreen is unavailable here. Use Large to fill the browser page.'; }

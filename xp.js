@@ -5,7 +5,15 @@ import { accountState } from './account-state.mjs';
   const roots = [...document.querySelectorAll('[data-xp-widget]')];
   for (const [widgetIndex,root] of roots.entries()) root.innerHTML = `<div class="xp-summary"><span class="level-badge" data-level>1</span><div class="xp-summary-copy"><strong>Level <span data-level-text>1</span></strong></div><span data-xp-timer>Idle</span></div><div class="xp-progress" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100"><span class="xp-progress-fill"><span class="xp-sparkles" aria-hidden="true"></span></span><span class="xp-progress-label" data-xp-label>0 / 100 XP</span></div><div class="activity-row"><div class="activity-control"><input class="activity-slider" type="range" min="0" max="100" value="0" step="0.01" aria-label="Slide all the way right to start 30 minutes of activity XP" disabled><span class="slider-burst" aria-hidden="true"></span><span class="slider-direction" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arrow-edge" d="M19 12H5m0 0 6-6m-6 6 6 6"/><path class="arrow-line" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg></span></div><button class="xp-info" type="button" aria-label="How the XP slider works" aria-expanded="false" aria-controls="xp-info-${widgetIndex}">?</button></div><p id="xp-info-${widgetIndex}" class="xp-explainer" hidden>Refill the slider every 30 minutes to keep earning XP. You can activate it without watching a video. XP only unlocks cosmetics and badges; it grants no other rewards.</p><p class="xp-help">Sign in to earn XP.</p><span class="xp-error" role="status"></span>`;
   let state = null, receivedAt = 0, available = false, busy = false, userId = null, expiryNotified = true;
-  function refillArrow() { for (const root of roots) { const arrow = root.querySelector(".slider-direction"); const distance = Math.max(0, root.querySelector(".activity-control").clientWidth - 32); arrow.getAnimations().forEach(animation => animation.cancel()); arrow.animate(reducedMotion() ? [{opacity:1},{opacity:0}] : [{opacity:0,transform:"translateX(0)"},{opacity:1,offset:.15},{opacity:0,transform:"translateX(-"+distance+"px)"}],{duration:850,easing:"ease-out"}); } }
+  let refillVisual=null,refillFrame=null;
+  function stopRefill(){if(refillFrame!==null)cancelAnimationFrame(refillFrame);refillFrame=null;refillVisual=null;}
+  function refillArrow(){
+    stopRefill();if(reducedMotion())return;
+    const started=performance.now();
+    const segments=[[0,1],[.18,0],[.68,.93],[.82,.82],[1,1]];
+    function tick(now){const t=Math.min(1,(now-started)/1700);let i=1;while(i<segments.length-1&&t>segments[i][0])i++;const [a,from]=segments[i-1],[b,to]=segments[i],p=(t-a)/(b-a);const eased=i===1?1-(1-p)**3:i===2? (p<.8?(p/.8)**2*.92:.92+(1-(1-(p-.8)/.2)**3)*.08):i===3?(1-Math.cos(p*Math.PI))/2:p*p;refillVisual=from+(to-from)*eased;draw();if(t<1)refillFrame=requestAnimationFrame(tick);else{stopRefill();draw();burst();for(const root of roots){const arrow=root.querySelector('.slider-direction'),distance=Math.max(0,root.querySelector('.activity-control').clientWidth-32);arrow.getAnimations().forEach(a=>a.cancel());arrow.animate([{opacity:0,transform:'translateX(0)'},{opacity:1,offset:.15},{opacity:0,transform:'translateX(-'+distance+'px)'}],{duration:850,easing:'ease-out'});}}}
+    refillFrame=requestAnimationFrame(tick);
+  }
   const dangerZone = document.querySelector('#danger-zone'), dangerActions = document.querySelector('#danger-actions'), unlockButton = document.querySelector('#danger-unlock'), deleteButton = document.querySelector('#xp-delete');
   let dangerUnlocked = false, holdFrame = null, holdStartedAt = null;
   const reducedMotion = () => document.body.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -64,9 +72,9 @@ import { accountState } from './account-state.mjs';
       progress.style.setProperty('--xp-progress', `${percent}%`); progress.setAttribute('aria-valuenow', percent.toFixed(1));
       const slider = root.querySelector('.activity-slider');
       const dragging = document.activeElement === slider && slider.matches(':active');
-      if (!dragging) slider.value = ratio * 100;
-      const displayRatio = dragging ? Number(slider.value) / 100 : ratio;
-      slider.disabled = !available || busy;
+      if (!dragging) slider.value = (refillVisual??ratio) * 100;
+      const displayRatio = dragging ? Number(slider.value) / 100 : (refillVisual??ratio);
+      slider.disabled = !available || busy || refillVisual!==null;
       root.querySelector('.activity-control').style.setProperty('--charge', (displayRatio * 100) + '%');
       progress.title = `${intoLevel.toFixed(1)} / ${required} XP to level ${level + 1}`;
       slider.style.setProperty('--charge', `${displayRatio * 100}%`);
@@ -87,7 +95,7 @@ import { accountState } from './account-state.mjs';
   let lastStart=null,lastRecord=null;
   accountState.subscribe(view=>{
     const changedUser=userId!==view.userId;
-    if(changedUser){userId=view.userId;lastRecord=null;lastStart=null;lockDanger();}
+    if(changedUser){stopRefill();userId=view.userId;lastRecord=null;lastStart=null;lockDanger();}
     busy=view.busy;available=Boolean(view.record);state=view.record?.data||null;
     if(view.record&&view.record!==lastRecord){
       receivedAt=performance.now()-Math.max(0,Date.now()-view.record.receivedAt);
@@ -97,6 +105,6 @@ import { accountState } from './account-state.mjs';
     error(view.error);if(!document.hidden)draw();
   });
   let drawTimer;
-  function resumeDraw(){clearInterval(drawTimer);if(!document.hidden){draw();drawTimer=setInterval(draw,100);}}
+  function resumeDraw(){clearInterval(drawTimer);if(document.hidden)stopRefill();if(!document.hidden){draw();drawTimer=setInterval(draw,100);}}
   document.addEventListener('visibilitychange',resumeDraw);resumeDraw();
 })();

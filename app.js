@@ -77,6 +77,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
       if (!response.ok) throw new Error('Feed unavailable'); const data = await response.json();
       if (!Array.isArray(data.streams)) throw new Error('Invalid feed');
       state.streams = data.streams.filter(x => validId(x.id) && ['live','upcoming'].includes(x.status)); state.updated = data.updatedAt;
+      window.WLNG_STREAMS=state.streams;window.dispatchEvent(new CustomEvent('wlng-streams',{detail:state.streams}));
       const stamp = data.updatedAt ? new Date(data.updatedAt) : null;
       $('#updated').textContent = stamp && !Number.isNaN(stamp.valueOf()) ? `${data.stale ? 'CACHED · ' : ''}UPDATED ${stamp.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` : 'STREAM FEED CONNECTED'; render();
     } catch { $('#updated').textContent = 'CONNECTION INTERRUPTED'; message('<strong>We couldn’t load the stream feed.</strong><br>Please try again in a little while.'); }
@@ -216,6 +217,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     else $('.header-right').insertBefore(auth,$('#settings-open'));
   };
   $('#menu-toggle').addEventListener('click', () => { document.body.classList.toggle('nav-collapsed'); updateNavigation(); if(mobile.matches&&document.body.classList.contains('nav-collapsed'))$('#hub-toggle').focus(); });
+  $('#multiview-open').addEventListener('click',()=>closeMobileNavigation());
   $('#nav-shade').addEventListener('click',()=>closeMobileNavigation(true));
   $('#search').addEventListener('focus',()=>closeMobileNavigation());
   document.addEventListener('keydown',event=>{
@@ -288,5 +290,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   setDensity(pref('wlng-density'));
   $('#density').addEventListener('change', e => setDensity(e.target.value));
   $('#density-toggle').addEventListener('click', () => setDensity(document.body.classList.contains('compact') ? 'comfortable' : 'compact'));
-  load();
+  let lastFeedRequest=0,feedPending=false;
+  window.addEventListener('wlng-refresh-streams',()=>{if(feedPending||Date.now()-lastFeedRequest<30000){window.dispatchEvent(new Event('wlng-feed-refreshed'));return;}lastFeedRequest=Date.now();feedPending=true;load().finally(()=>{feedPending=false;window.dispatchEvent(new Event('wlng-feed-refreshed'));});});
+  lastFeedRequest=Date.now();load();
 })();

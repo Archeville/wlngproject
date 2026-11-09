@@ -10,8 +10,8 @@ import { accountState } from './account-state.mjs';
   function refillArrow(){
     stopRefill();if(reducedMotion())return;
     const started=performance.now();
-    const segments=[[0,1],[.18,0],[.68,.93],[.82,.82],[1,1]];
-    function tick(now){const t=Math.min(1,(now-started)/1700);let i=1;while(i<segments.length-1&&t>segments[i][0])i++;const [a,from]=segments[i-1],[b,to]=segments[i],p=(t-a)/(b-a);const eased=i===1?1-(1-p)**3:i===2? (p<.8?(p/.8)**2*.92:.92+(1-(1-(p-.8)/.2)**3)*.08):i===3?(1-Math.cos(p*Math.PI))/2:p*p;refillVisual=from+(to-from)*eased;draw();if(t<1)refillFrame=requestAnimationFrame(tick);else{stopRefill();draw();burst();for(const root of roots){const arrow=root.querySelector('.slider-direction'),distance=Math.max(0,root.querySelector('.activity-control').clientWidth-32);arrow.getAnimations().forEach(a=>a.cancel());arrow.animate([{opacity:0,transform:'translateX(0)'},{opacity:1,offset:.15},{opacity:0,transform:'translateX(-'+distance+'px)'}],{duration:850,easing:'ease-out'});}}}
+    const segments=[[0,1],[.18,0],[1,1]];
+    function tick(now){const t=Math.min(1,(now-started)/1400);let i=1;while(i<segments.length-1&&t>segments[i][0])i++;const [a,from]=segments[i-1],[b,to]=segments[i],p=(t-a)/(b-a);const eased=i===1?1-(1-p)**3:p*p*p;refillVisual=from+(to-from)*eased;draw();if(t<1)refillFrame=requestAnimationFrame(tick);else{stopRefill();draw();burst();for(const root of roots){const arrow=root.querySelector('.slider-direction'),distance=Math.max(0,root.querySelector('.activity-control').clientWidth-32);arrow.getAnimations().forEach(a=>a.cancel());arrow.animate([{opacity:0,transform:'translateX(0)'},{opacity:1,offset:.15},{opacity:0,transform:'translateX(-'+distance+'px)'}],{duration:850,easing:'ease-out'});}}}
     refillFrame=requestAnimationFrame(tick);
   }
   const dangerZone = document.querySelector('#danger-zone'), dangerActions = document.querySelector('#danger-actions'), unlockButton = document.querySelector('#danger-unlock'), deleteButton = document.querySelector('#xp-delete');

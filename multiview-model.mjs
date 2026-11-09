@@ -8,7 +8,7 @@ export function normalizeLayout(value={}){
  for(const item of (Array.isArray(value.tiles)?value.tiles:[]).slice(0,12)){
   if(!item||typeof item.channelId!=='string'||!/^[-\w]{1,128}$/.test(item.channelId)||seen.has(item.channelId))continue;
   const convert=g=>value.version===2?g:Object.fromEntries(['x','y','w','h'].map(k=>[k,Number.isFinite(g?.[k])?g[k]*64/48:g?.[k]]));
-  seen.add(item.channelId);tiles.push({channelId:item.channelId,name:text(item.name,128)||item.channelId,...geometry(convert(item)),chat:item.chat&&typeof item.chat==='object'?geometry(convert(item.chat),true):null});
+  seen.add(item.channelId);tiles.push({channelId:item.channelId,name:text(item.name,128)||item.channelId,...geometry(convert(item)),chat:item.chat&&typeof item.chat==='object'?{...geometry(convert(item.chat),true),theme:item.chat.theme==='light'?'light':'dark'}:null});
  }
  return {version:2,zoom:number(value.zoom,10,150,75),view:{x:number(value.view?.x,-10000,10000,24),y:number(value.view?.y,-10000,10000,24)},tiles};
 }

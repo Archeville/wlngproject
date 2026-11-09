@@ -1,4 +1,4 @@
-import {GRID,geometry,normalizeLayout,normalizeSaves,liveForChannel,clampCamera} from './multiview-model.mjs?v=20261109-canvas3';
+import {GRID,geometry,normalizeLayout,normalizeSaves,liveForChannel,clampCamera} from './multiview-model.mjs?v=20261109-chat4';
 const $=s=>document.querySelector(s),panel=$('#multiview'),canvas=$('#mv-canvas'),viewport=$('#mv-viewport');
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 let layout=normalizeLayout(read('wlng-multiview-draft',{})),saves=normalizeSaves(read('wlng-multiview-saves',[])),streams=window.WLNG_STREAMS||[],active=false,drag=null,refreshUntil=0,lastFeedAt=Date.now();
@@ -15,6 +15,7 @@ function tileNode(item,chat){
  const key=item.channelId+(chat?':chat':':video');if(nodes.has(key))return nodes.get(key);
  const tile=document.createElement('section');tile.className='mv-tile';tile.setAttribute('aria-label',item.name+(chat?' chat':' stream'));
  const top=document.createElement('header'),handle=button(item.name+(chat?' · Chat':''),()=>{});handle.className='mv-handle';handle.setAttribute('aria-label','Move '+item.name+(chat?' chat':' stream'));top.append(handle);
+ if(chat){const themeButton=button(item.chat.theme==='light'?'Black chat':'White chat',()=>{item.chat.theme=item.chat.theme==='light'?'dark':'light';themeButton.textContent=item.chat.theme==='light'?'Black chat':'White chat';sync();saveDraft();});themeButton.title='Switch between white and black YouTube chat';top.append(themeButton);}
  if(!chat)top.append(button('Chat',()=>{item.chat=item.chat?null:geometry(freeSpace(7,11),true);sync();saveDraft();}));
  top.append(button('×',()=>{if(chat)item.chat=null;else layout.tiles=layout.tiles.filter(x=>x!==item);sync();saveDraft();}));top.lastElementChild.setAttribute('aria-label',chat?'Remove chat':'Remove stream');
  const body=document.createElement('div');body.className='mv-body';const resize=button('◢',()=>{});resize.className='mv-resize';resize.setAttribute('aria-label','Resize '+item.name+(chat?' chat':' stream'));tile.append(top,body,resize);canvas.append(tile);nodes.set(key,tile);
@@ -33,9 +34,9 @@ function sync(){
  for(const item of layout.tiles)for(const chat of [false,true]){
   if(chat&&!item.chat)continue;const key=item.channelId+(chat?':chat':':video');keep.add(key);const node=tileNode(item,chat);position(node,chat?item.chat:item);
   const live=liveForChannel(streams,item.channelId),video=active&&live?live.id:'';const body=node.querySelector('.mv-body');
-  if(body.dataset.video===video)continue;body.dataset.video=video;body.replaceChildren();
+  const source=video+(chat?':'+(item.chat.theme||'dark'):'');if(body.dataset.source===source)continue;body.dataset.source=source;body.dataset.video=video;body.replaceChildren();
   if(video){const frame=document.createElement('iframe');frame.title=item.name+(chat?' YouTube chat':' YouTube stream');frame.referrerPolicy='strict-origin-when-cross-origin';
-   if(chat)frame.src='https://www.youtube.com/live_chat?v='+video+'&embed_domain='+encodeURIComponent(location.hostname)+'&dark_theme=1';
+   if(chat){frame.style.colorScheme='only light';frame.src='https://www.youtube.com/live_chat?v='+video+'&embed_domain='+encodeURIComponent(location.hostname)+'&dark_theme='+(item.chat.theme==='light'?'0':'1');}
    else {frame.src=new URL('player-embed.html?video='+encodeURIComponent(video),location.href).href;frame.allow='autoplay; encrypted-media; picture-in-picture; web-share';frame.allowFullscreen=true;}
    body.append(frame);
   }else{const note=document.createElement('p');note.className='mv-unavailable';note.textContent=item.name+' · Unavailable\nThis channel is not live.';body.append(note);}
@@ -54,7 +55,7 @@ function drawPicker(){
  if(!grid.children.length){const note=document.createElement('p');note.className='watch-note';note.textContent='No streams match these filters.';grid.append(note);}
  $('#mv-picker-note').textContent=layout.tiles.length>=GRID.maxStreams?'Your grid has the maximum of 12 streams.':layout.tiles.length+' / 12 streams · Click a stream to add it.';
 }
-function addChannel(id){if(layout.tiles.length>=GRID.maxStreams||layout.tiles.some(t=>t.channelId===id))return;const s=streams.find(s=>s.channel?.id===id);if(!s)return;layout.tiles.push({channelId:id,name:s.channel.english_name||s.channel.name||id,...geometry(freeSpace(11,8)),chat:null});sync();saveDraft();status('Stream added. Drag its title to place it.');}
+function addChannel(id){if(layout.tiles.length>=GRID.maxStreams||layout.tiles.some(t=>t.channelId===id))return;const s=streams.find(s=>s.channel?.id===id);if(!s)return;layout.tiles.push({channelId:id,name:s.channel.english_name||s.channel.name||id,...geometry(freeSpace(11,8)),chat:null});sync();saveDraft();status('“'+(liveForChannel(streams,id)?.title||s.title||s.channel.name||id)+'” added');}
 function saveOptions(selected=$('#mv-saved').value){const select=$('#mv-saved');select.replaceChildren(new Option('Choose a layout',''));for(const save of saves)select.append(new Option(save.name,save.id));select.value=saves.some(x=>x.id===selected)?selected:'';$('#mv-save-new').disabled=saves.length>=10;for(const id of ['load','update','delete'])$('#mv-'+id).disabled=!select.value;}
 $('#mv-saved').addEventListener('change',()=>saveOptions());
 $('#mv-save-new').addEventListener('click',()=>{if(saves.length>=10)return;const entry={id:crypto.randomUUID(),name:$('#mv-name').value.trim().slice(0,40)||'Layout '+(saves.length+1),layout:normalizeLayout(layout)};const next=[...saves,entry];if(persist('wlng-multiview-saves',next)){saves=next;saveOptions(entry.id);status('Layout saved in this browser.');}});
@@ -74,9 +75,13 @@ viewport.addEventListener('keydown',e=>{if(e.target!==viewport||!['ArrowLeft','A
 new ResizeObserver(()=>{if(active)zoom();}).observe(viewport);
 viewport.addEventListener('wheel',event=>{if(!event.deltaY||event.ctrlKey||event.metaKey)return;event.preventDefault();zoomAt(layout.zoom+(event.deltaY<0?5:-5),event.clientX,event.clientY);},{passive:false});
 viewport.addEventListener('keydown',event=>{if(event.target.closest('input,select,textarea')||!['+','=','-','_','0'].includes(event.key))return;event.preventDefault();const rect=viewport.getBoundingClientRect();zoomAt(event.key==='0'?100:layout.zoom+(['+','='].includes(event.key)?5:-5),rect.left+viewport.clientWidth/2,rect.top+viewport.clientHeight/2);});
+let expanded=false,previousInert=null;
+function setExpanded(next){if(next===expanded)return;const before=viewport.getBoundingClientRect(),oldCenter={x:(viewport.clientWidth/2-layout.view.x)/(layout.zoom/100),y:(viewport.clientHeight/2-layout.view.y)/(layout.zoom/100)};expanded=next;document.body.classList.toggle('mv-expanded',expanded);const topbar=$('.topbar'),sidebar=$('#sidebar');if(expanded){previousInert={topbar:topbar.inert,sidebar:sidebar.inert};topbar.inert=sidebar.inert=true;}else if(previousInert){topbar.inert=previousInert.topbar;sidebar.inert=$('#menu-toggle').getAttribute('aria-expanded')!=='true';previousInert=null;}$('#mv-expand').textContent=expanded?'Exit expanded grid':'Expand grid';$('#mv-expand').setAttribute('aria-pressed',String(expanded));layout.view={x:viewport.clientWidth/2-oldCenter.x*layout.zoom/100,y:viewport.clientHeight/2-oldCenter.y*layout.zoom/100};zoom();const after=viewport.getBoundingClientRect();if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!document.body.classList.contains('reduce-motion')){viewport.getAnimations().forEach(a=>a.cancel());viewport.animate([{transform:'translate('+(before.left-after.left)+'px,'+(before.top-after.top)+'px) scale('+(before.width/after.width)+','+(before.height/after.height)+')'},{transform:'none'}],{duration:280,easing:'cubic-bezier(.2,.8,.2,1)'});}saveDraft();}
+$('#mv-expand').addEventListener('click',()=>setExpanded(!expanded));
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&expanded&&!document.querySelector('dialog[open]')){event.preventDefault();setExpanded(false);$('#mv-expand').focus();}});
 $('#mv-refresh').addEventListener('click',()=>{if(Date.now()<refreshUntil)return;refreshUntil=Date.now()+30000;$('#mv-refresh').disabled=true;window.dispatchEvent(new Event('wlng-refresh-streams'));status('Checking live channels…');setTimeout(()=>{$('#mv-refresh').disabled=false;},30000);});
-window.addEventListener('wlng-feed-refreshed',()=>status('Live-channel check finished.'));
+window.addEventListener('wlng-feed-refreshed',()=>status(''));
 window.addEventListener('wlng-streams',e=>{streams=Array.isArray(e.detail)?e.detail:[];lastFeedAt=Date.now();channels();});
-function show(show){active=show;panel.hidden=!show;$('#discover').hidden=show;$('#multiview-open').classList.toggle('selected',show);$('#multiview-open').setAttribute('aria-pressed',String(show));$('#hub-toggle').classList.toggle('selected',!show);finishDrag();finishPan();if(show){channels();if(Date.now()-lastFeedAt>60000)window.dispatchEvent(new Event('wlng-refresh-streams'));}else removeNodes();}
+function show(show){if(!show&&expanded)setExpanded(false);active=show;panel.hidden=!show;$('#discover').hidden=show;$('#multiview-open').classList.toggle('selected',show);$('#multiview-open').setAttribute('aria-pressed',String(show));$('#hub-toggle').classList.toggle('selected',!show);finishDrag();finishPan();if(show){channels();if(Date.now()-lastFeedAt>60000)window.dispatchEvent(new Event('wlng-refresh-streams'));}else removeNodes();}
 $('#multiview-open').addEventListener('click',()=>show(true));for(const el of document.querySelectorAll('#hub-toggle,.agency-link,#favorites-open'))el.addEventListener('click',()=>show(false));
 channels();saveOptions();

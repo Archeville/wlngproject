@@ -5,7 +5,7 @@ if(match){
   view.replaceChildren(Object.assign(document.createElement('p'),{textContent:'Loading profile…'}));
   (async()=>{
     try{
-      const response=await fetch('https://wlng-api.wlng.workers.dev/api/profiles/'+encodeURIComponent(match[1].toLowerCase()),{signal:AbortSignal.timeout(12000)});
+      const response=await fetch('https://wlng.lol/api/profiles/'+encodeURIComponent(match[1].toLowerCase()),{signal:AbortSignal.timeout(12000)});
       const data=await response.json();if(!response.ok)throw new Error(data.error||'Profile unavailable.');
       const p=data.profile;
       if(!p||!/^[a-z0-9_]{3,24}$/.test(p.username)||!Number.isInteger(p.level)||p.level<1||!Number.isFinite(p.xp)||!Number.isFinite(p.required)||p.required<=0||typeof p.description!=='string')throw new Error('Profile unavailable.');

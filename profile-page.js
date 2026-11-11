@@ -1,5 +1,5 @@
-import { renderProfileGrid, profileGridCss } from './profile-layout.mjs?v=20261112-fit2';
-import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261112-layout1';
+import { renderProfileGrid, profileGridCss } from './profile-layout.mjs?v=20261112-scroll1';
+import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261112-scroll1';
 import { skinPaint, badgeStyle, profileThemeCss, profileAwards, awardCss, profileIcons, profileIconCss, profileResponsiveCss } from './cosmetics.mjs?v=20261112-layout1';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);

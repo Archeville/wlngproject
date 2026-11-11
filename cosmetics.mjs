@@ -16,7 +16,7 @@ export function profileThemeVariables(theme) {
 export function profileThemeCss(theme) {
   if (!Object.hasOwn(profilePalettes, theme)) return '';
   const declarations=Object.entries(profileThemeVariables(theme)).map(([key,value])=>key+':'+value).join(';');
-  return 'body{'+declarations+';background:radial-gradient(ellipse at top right,var(--profile-back),transparent 65%),var(--profile-bg);min-height:100vh}'
+  return ':root{--profile-scroll-thumb:'+profilePalettes[theme][2]+'}body{'+declarations+';background:radial-gradient(ellipse at top right,var(--profile-back),transparent 65%),var(--profile-bg);min-height:100vh}'
     +'.profile-top{background:var(--profile-front);border-color:var(--profile-border)}.profile-top:before{background:var(--profile-back);border-color:var(--profile-border)}'
     +'header,.progress{border-color:var(--profile-border)}h1,.brand{color:var(--profile-accent)}';
 }

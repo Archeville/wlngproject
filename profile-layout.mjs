@@ -116,25 +116,38 @@ export function renderProfileGrid(profile, layout, editing = false) {
   const guide = editing ? `<div class="canvas-outline" aria-hidden="true" style="grid-area:${gridArea([0, 0, columns, rows], left, top)}"></div><div class="layout-expansion-outline" aria-hidden="true" hidden></div>` : '';
   // Cell proportions make the central columns × rows rectangle exactly 16:9.
   const aspect = `${width * 16 * rows}/${height * 9 * columns}`;
-  const grid = `<section class="profile-grid${editing ? ' editing' : ''}" aria-label="Profile layout" data-left="${left}" data-top="${top}" data-columns="${width}" data-rows="${height}" style="--layout-columns:${width};--layout-rows:${height};aspect-ratio:${aspect};--skin:${skinPaint(profile.skin, level)}">${guide}${markup}</section>`;
+  // Leave room below the grid for artwork taller than the cells it occupies.
+  const artSizes = { level:'var(--level-size) + 15px', agency:'var(--agency-size)', xp:'var(--progress-size)' };
+  const overhangs = editing ? [] : items.flatMap(([id], index) => {
+    const size = id.startsWith('badge-') ? 'var(--award-size)' : artSizes[id];
+    if (!size) return [];
+    const [, y, , , scale = 1] = rectangles[index];
+    return [`calc((${size}) * ${scale} - var(--cell-height) * ${bottom - y})`];
+  });
+  const tail = overhangs.length ? `;--grid-tail:max(0px,${overhangs.join(',')})` : '';
+  const grid = `<section class="profile-grid${editing ? ' editing' : ''}" aria-label="Profile layout" data-left="${left}" data-top="${top}" data-columns="${width}" data-rows="${height}" style="--layout-columns:${width};--layout-rows:${height};aspect-ratio:${aspect};--skin:${skinPaint(profile.skin, level)}${tail}">${guide}${markup}</section>`;
   return editing ? grid : `<div class="profile-grid-viewport"${width > columns ? ' tabindex="0" role="region" aria-label="Scrollable profile layout"' : ''}>${grid}</div>`;
 }
 
 export const profileGridCss = `
-.profile-grid-viewport{container-type:inline-size;overflow:auto;padding:8px;max-width:1740px}
-.profile-grid{--canvas-width:min(100cqw,860px);--award-size:64px;--level-size:65px;--username-size:30px;--progress-size:24px;display:grid;position:relative;isolation:isolate;grid-template-columns:repeat(var(--layout-columns),minmax(0,1fr));grid-template-rows:repeat(var(--layout-rows),minmax(0,1fr));width:calc(var(--canvas-width) * var(--layout-columns) / 12)}
+.profile-grid-viewport{container-type:inline-size;overflow-x:auto;overflow-y:hidden;padding:24px 8px;max-width:1740px}
+.profile-grid-viewport,.profile-grid .description{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--profile-border,#55555d) 80%,#aaa) transparent}
+:root:has(.profile-grid-viewport){scrollbar-width:thin;scrollbar-color:var(--profile-scroll-thumb,#626268) transparent}
+.profile-grid{--canvas-width:min(100cqw,860px);--cell-height:calc(var(--canvas-width) * 9 / 240);--award-size:64px;--level-size:65px;--username-size:30px;--progress-size:24px;--agency-size:min(34vw,420px);display:grid;position:relative;isolation:isolate;grid-template-columns:repeat(var(--layout-columns),minmax(0,1fr));grid-template-rows:repeat(var(--layout-rows),minmax(0,1fr));width:calc(var(--canvas-width) * var(--layout-columns) / 12);margin-bottom:var(--grid-tail,0px)}
 .layout-item{min-width:0;position:relative;display:flex;align-items:center;justify-content:flex-start;overflow-wrap:anywhere;z-index:2}
+.profile-grid-viewport .layout-item{align-items:safe center}
 .layout-item[data-item="box"]{z-index:0;display:block;pointer-events:none}
 .layout-item[data-item="box"] .profile-card-frame,.layout-item[data-item="box"] .profile-top{height:100%}
 .layout-item[data-item="box"] .profile-top{position:relative;isolation:isolate;padding:0;background-color:var(--profile-front,#19191e);border:1px solid var(--profile-border,#35353e)}
 .layout-item[data-item="box"] .profile-top::before{content:"";position:absolute;z-index:-1;inset:4px -4px -4px 4px;transform:rotate(-1deg);background:var(--profile-back,#111116);border:1px solid var(--profile-border,#30303b)}
 .layout-item[data-item="agency"]{z-index:1;pointer-events:none}
-.grid-agency{--agency-size:min(34vw,420px);width:calc(var(--agency-size) * var(--object-scale));height:calc(var(--agency-size) * var(--object-scale));max-width:none;flex:none;object-fit:contain;opacity:.3}
+.grid-agency{width:calc(var(--agency-size) * var(--object-scale));height:calc(var(--agency-size) * var(--object-scale));max-width:none;flex:none;object-fit:contain;opacity:.3}
 .layout-item[data-item="username"] h1,.layout-item[data-item="title"] .profile-title,.layout-item .description{margin:0;padding:0 5px;min-width:0}
 .layout-item[data-item="username"] h1{overflow:visible;overflow-wrap:anywhere;font-size:calc(var(--username-size) * var(--object-scale));line-height:1.2;color:var(--profile-accent,inherit)}
 .layout-item[data-item="title"] .profile-title{font-size:calc(14px * var(--object-scale));line-height:1.3}
 .layout-item .description{white-space:pre-wrap;font-size:calc(15px * var(--object-scale));line-height:1.45;max-height:100%;overflow:auto}
 .layout-item[data-item="level"]{flex-direction:column;justify-content:center;text-align:center;gap:3px}
+.profile-grid-viewport .layout-item[data-item="level"]{justify-content:safe center}
 .layout-item[data-item="level"] .badge{width:calc(var(--level-size) * var(--object-scale));height:calc(var(--level-size) * var(--object-scale));flex:none;display:grid;place-items:center}
 .layout-item[data-item="level"] small{font-size:calc(12.5px * var(--object-scale));line-height:1.2}
 .profile-grid .layout-item .badge.level-icon{font-size:calc(15px * var(--object-scale))!important}
@@ -154,6 +167,6 @@ export const profileGridCss = `
 .layout-item:has(.profile-award-item:is(:focus,:hover)){z-index:4}
 .layout-mirror{transform:scaleX(-1)}
 main:has(.profile-grid){width:auto;max-width:none;margin-inline:clamp(18px,6vw,90px)}
-@media(max-width:780px){.profile-grid{--level-size:54px;--username-size:clamp(21px,5.7vw,28px);--progress-size:28px}.grid-agency{--agency-size:min(44vw,240px)}}
+@media(max-width:780px){.profile-grid{--level-size:54px;--username-size:clamp(21px,5.7vw,28px);--progress-size:28px;--agency-size:min(44vw,240px)}}
 @media(max-width:360px){.profile-grid{--level-size:46px;--award-size:56px}}
 `;

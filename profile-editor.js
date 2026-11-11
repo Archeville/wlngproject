@@ -1,7 +1,7 @@
 import { accountState } from './account-state.mjs';
 import { profileThemeVariables, badgeCss, awardCss } from './cosmetics.mjs?v=20261112-layout1';
 import { profileCardCss } from './profile-cosmetics.mjs?v=20261112-layout1';
-import { columns, rows, rowHeight, layoutItems, itemRect, resizeItem, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-size1';
+import { placement, layoutItems, itemRect, resizeItem, gridArea, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-canvas1';
 import { levelProgress } from './levels.mjs';
 
 const dialog = document.querySelector('#profile-editor');
@@ -39,10 +39,17 @@ function previewData() {
 
 function syncControls() {
   const [x, y, w, h, scale = 1] = itemRect(draft, selected);
-  const limits = [[x + 1, columns - w + 1], [y + 1, rows - h + 1], [w, columns - x], [h, rows - y]];
+  const limits = [
+    [x + 1, placement.left + 1, placement.right - w + 1],
+    [y + 1, placement.top + 1, placement.bottom - h + 1],
+    [w, 1, Math.min(placement.maxWidth, placement.right - x)],
+    [h, 1, Math.min(placement.maxHeight, placement.bottom - y)]
+  ];
   for (const [index, input] of inputs.entries()) {
-    input.value = limits[index][0];
-    input.max = limits[index][1];
+    const [value, min, max] = limits[index];
+    input.value = value;
+    input.min = min;
+    input.max = max;
     input.disabled = !ready();
   }
   list.value = selected;
@@ -52,6 +59,13 @@ function syncControls() {
   }
   for (const tile of stage.querySelectorAll('[data-item]')) {
     tile.classList.toggle('selected', tile.dataset.item === selected);
+  }
+  const handle = stage.querySelector('.editor-move-handle');
+  if (handle) {
+    const grid = handle.parentElement;
+    handle.style.gridArea = gridArea(itemRect(draft, selected), Number(grid.dataset.left), Number(grid.dataset.top));
+    handle.firstElementChild.title = 'Drag ' + layoutItems[selected][0].toLowerCase();
+    handle.hidden = !ready();
   }
   save.disabled = !ready() || !changed();
   reset.disabled = !ready() || draft === null;
@@ -63,6 +77,7 @@ function render() {
   stage.removeAttribute('style');
   for (const [key, value] of Object.entries(profileThemeVariables(profile.profileTheme))) stage.style.setProperty(key, value);
   stage.innerHTML = renderProfileGrid(profile, draft || {}, true);
+  stage.firstElementChild.insertAdjacentHTML('beforeend', '<div class="editor-move-handle" aria-hidden="true"><span data-move-selected>✥</span></div>');
   const tiles = [...stage.querySelectorAll('[data-item]')];
   if (!tiles.some(tile => tile.dataset.item === selected)) selected = 'username';
   list.replaceChildren(...tiles.map(tile => new Option(layoutItems[tile.dataset.item][0], tile.dataset.item)));
@@ -76,8 +91,7 @@ function setRect(id, rect, repaint = true) {
   if (repaint) render();
   else {
     const tile = stage.querySelector('[data-item="' + id + '"]');
-    const [x, y, w, h] = rect;
-    tile.style.gridArea = `${y + 1}/${x + 1}/span ${h}/span ${w}`;
+    tile.style.gridArea = gridArea(rect, drag.left, drag.top);
     syncControls();
   }
 }
@@ -99,7 +113,7 @@ async function loadDetails() {
     const { profile } = await response.json();
     if (controller.signal.aborted || !dialog.open) return;
     details = profile;
-    render();
+    if (!drag) render();
   } catch {
     if (!controller.signal.aborted && dialog.open) status.textContent = 'Could not load your profile text. You can still edit the layout.';
   }
@@ -154,16 +168,26 @@ for (const button of sizes) {
 inputs.forEach((input, index) => input.addEventListener('change', () => {
   const rect = [...itemRect(draft, selected)];
   if (!Number.isInteger(input.valueAsNumber)) { syncControls(); return; }
-  rect[index] = clamp(input.valueAsNumber, 1, Number(input.max)) - (index < 2 ? 1 : 0);
+  rect[index] = clamp(input.valueAsNumber, Number(input.min), Number(input.max)) - (index < 2 ? 1 : 0);
   setRect(selected, rect);
   syncControls();
 }));
 stage.addEventListener('pointerdown', event => {
-  const tile = event.target.closest('[data-item]');
+  const tile = event.target.closest('[data-move-selected]')
+    ? stage.querySelector('[data-item="' + selected + '"]')
+    : event.target.closest('[data-item]');
   if (!tile || event.button !== 0 || !ready()) return;
   selected = tile.dataset.item;
   const grid = tile.parentElement;
-  drag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, cellWidth: grid.clientWidth / columns, scroll: stage.scrollTop, rect: itemRect(draft, selected) };
+  const { left, top, columns, rows } = Object.fromEntries(
+    ['left', 'top', 'columns', 'rows'].map(key => [key, Number(grid.dataset[key])])
+  );
+  drag = {
+    pointerId: event.pointerId, x: event.clientX, y: event.clientY, scroll: stage.scrollTop,
+    left, top, right: left + columns, bottom: top + rows,
+    cellWidth: grid.clientWidth / columns, cellHeight: grid.clientHeight / rows,
+    rect: itemRect(draft, selected)
+  };
   stage.setPointerCapture(event.pointerId);
   syncControls();
 });
@@ -171,8 +195,8 @@ stage.addEventListener('pointermove', event => {
   if (drag?.pointerId !== event.pointerId) return;
   const [x, y, w, h, ...size] = drag.rect;
   const dx = Math.round((event.clientX - drag.x) / drag.cellWidth);
-  const dy = Math.round((event.clientY - drag.y + stage.scrollTop - drag.scroll) / rowHeight);
-  setRect(selected, [clamp(x + dx, 0, columns - w), clamp(y + dy, 0, rows - h), w, h, ...size], false);
+  const dy = Math.round((event.clientY - drag.y + stage.scrollTop - drag.scroll) / drag.cellHeight);
+  setRect(selected, [clamp(x + dx, drag.left, drag.right - w), clamp(y + dy, drag.top, drag.bottom - h), w, h, ...size], false);
 });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
   stage.addEventListener(type, event => {

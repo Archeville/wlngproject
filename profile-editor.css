@@ -51,10 +51,10 @@
 }
 .profile-grid.editing {
   background-image: linear-gradient(to right,#aaa3 1px,transparent 1px),linear-gradient(to bottom,#aaa3 1px,transparent 1px);
-  background-size: calc(100% / 12) var(--layout-cell);
-  border-bottom: 1px solid #aaa3;
-  border-right: 1px solid #aaa3;
+  background-size: calc(100% / var(--layout-columns)) calc(100% / var(--layout-rows));
+  box-shadow: inset -1px -1px #aaa3;
 }
+.canvas-outline { position:relative; pointer-events:none; background:#aaa1; outline:1px solid #ab97ff; outline-offset:-1px; z-index:-1; }
 .profile-grid.editing .layout-item {
   cursor: grab;
   pointer-events: auto;
@@ -64,6 +64,13 @@
 }
 .editing .layout-item > * { pointer-events: none; }
 .editing .layout-item.selected { outline: 2px solid #ab97ff; outline-offset: -2px; }
+.editor-move-handle { position:relative; z-index:6; pointer-events:none; }
+.editor-move-handle > span {
+  position:absolute; top:0; right:0; width:20px; height:20px;
+  display:grid; place-items:center; border-radius:3px;
+  color:#15111f; background:#c1afff;
+  cursor:grab; pointer-events:auto; touch-action:none; user-select:none;
+}
 .editor-sizes { border: 0; margin: 0; padding: 0; min-width: 0; }
 .editor-sizes legend { margin-bottom: 5px; font-size: 13px; }
 .editor-size-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }

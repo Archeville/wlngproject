@@ -1,5 +1,5 @@
-import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261111-frames1';
-import {barSkins,themeSkins,badgeSkins,skinPaint,badgeStyle,profileAwards,profileIcons} from './cosmetics.mjs?v=20261108-profileedit1';
+import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261112-layout1';
+import {barSkins,themeSkins,badgeSkins,skinPaint,badgeStyle,profileAwards,profileIcons,profileThemeVariables} from './cosmetics.mjs?v=20261112-layout1';
 import {accountState} from './account-state.mjs';
 (() => {
  const dialog=document.querySelector('#skins-dialog'),status=document.querySelector('#skin-status'),applyButton=document.querySelector('#skins-apply'),revert=document.querySelector('#skins-revert');
@@ -14,8 +14,8 @@ import {accountState} from './account-state.mjs';
  const cardStyles=document.createElement('style');
  cardStyles.textContent=profileCardCss+`
    .profile-demo { color:#f5f5f8; padding:18px 12px 25px; max-width:540px; }
-   .profile-demo .profile-top { position:relative; isolation:isolate; display:flex; align-items:center; gap:14px; padding:16px; background:#19191e; border:1px solid #53515d; }
-   .profile-demo .profile-top::before { content:""; position:absolute; z-index:-1; inset:5px -5px -5px 5px; background:#15151b; border:1px solid #403d4a; transform:rotate(-1deg); }
+   .profile-demo .profile-top { position:relative; isolation:isolate; display:flex; align-items:center; gap:14px; padding:16px; background:var(--profile-front,#19191e); border:1px solid var(--profile-border,#53515d); }
+   .profile-demo .profile-top::before { content:""; position:absolute; z-index:-1; inset:5px -5px -5px 5px; background:var(--profile-back,#15151b); border:1px solid var(--profile-border,#403d4a); transform:rotate(-1deg); }
    .profile-demo .skin-badge-preview { display:grid; place-items:center; flex:0 0 45px; height:45px; }
    .profile-demo strong { overflow-wrap:anywhere; }
    #card-preview-level-text { color:#c5c3ce; font-size:12px; }
@@ -32,6 +32,8 @@ import {accountState} from './account-state.mjs';
    label.hidden=!shownTitle;
    label.textContent=shownTitle;
    cardPreview.dataset.frame=draft.profileFrame;
+   cardPreview.removeAttribute('style');
+   for(const [name,value] of Object.entries(profileThemeVariables(draft.profileTheme)))cardPreview.style.setProperty(name,value);
    document.querySelector('#card-preview-level-text').textContent='Level '+level;
    const icon=document.querySelector('#card-preview-level');
    icon.textContent=level;

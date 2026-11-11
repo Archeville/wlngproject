@@ -1,5 +1,6 @@
-import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261111-frames1';
-import { skinPaint, badgeStyle, profileThemeCss, profileAwards, awardCss, profileIcons, profileIconCss, profileResponsiveCss } from './cosmetics.mjs?v=20261111-badges2';
+import { renderProfileGrid, profileGridCss } from './profile-layout.mjs?v=20261112-layout1';
+import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261112-layout1';
+import { skinPaint, badgeStyle, profileThemeCss, profileAwards, awardCss, profileIcons, profileIconCss, profileResponsiveCss } from './cosmetics.mjs?v=20261112-layout1';
 const view=document.querySelector('main');
 const match=/^\/user\/([a-z0-9_]{3,24})\/?$/i.exec(location.pathname);
 if(match){
@@ -11,7 +12,9 @@ if(match){
       const p=data.profile;
       if(!p||!/^[a-z0-9_]{3,24}$/.test(p.username)||!Number.isInteger(p.level)||p.level<1||!Number.isFinite(p.xp)||!Number.isFinite(p.required)||p.required<=0||typeof p.description!=='string')throw new Error('Profile unavailable.');
       const canonical='/user/'+p.username;if(location.pathname!==canonical){location.replace(canonical);return;}
-      document.title='@'+p.username+' — WLNG';const colors=document.createElement('style');colors.textContent=profileIconCss+awardCss+profileThemeCss(p.theme)+profileResponsiveCss+profileCardCss;document.head.append(colors);
+      document.title='@'+p.username+' — WLNG';const colors=document.createElement('style');colors.textContent=profileIconCss+awardCss+profileThemeCss(p.theme)+profileResponsiveCss+profileGridCss+profileCardCss;document.head.append(colors);
+      const grid=renderProfileGrid(p,p.profileLayout);
+      if(grid){view.innerHTML=grid;return;}
       if(p.profileIcon!=='none'&&profileIcons.some(x=>x[0]===p.profileIcon)){const icon=document.createElement('div');icon.className='profile-side-icon icon-'+p.profileIcon;icon.setAttribute('aria-hidden','true');document.body.prepend(icon);}
       view.style.setProperty('--skin',skinPaint(p.skin,p.level));
       const frame=document.createElement('div');frame.className='profile-card-frame';frame.dataset.frame=profileFrames.find(([id])=>id===p.profileFrame)?.[0]||'classic';

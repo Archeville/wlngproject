@@ -105,9 +105,13 @@ export function renderProfileGrid(profile, layout, editing = false) {
   const height = bottom - top;
   const markup = items.map(([id, html], index) => {
     const rect = rectangles[index];
+    const [x, y] = rect;
     const scale = rect[4] ?? 1;
     const mirrored = frame === 'reversed' && ['username', 'level', 'title'].includes(id) && within(rect, itemRect(layout, 'box'));
-    return `<div class="layout-item${mirrored ? ' layout-mirror' : ''}" data-item="${id}" style="grid-area:${gridArea(rect, left, top)};--object-scale:${scale}">${html}</div>`;
+    const tooltipPlacement = !editing && id.startsWith('badge-')
+      ? ` data-tip-vertical="${y - top < height / 2 ? 'below' : 'above'}" data-tip-horizontal="${x - left < width / 2 ? 'left' : 'right'}"`
+      : '';
+    return `<div class="layout-item${mirrored ? ' layout-mirror' : ''}" data-item="${id}" style="grid-area:${gridArea(rect, left, top)};--object-scale:${scale}"${tooltipPlacement}>${html}</div>`;
   }).join('');
   const guide = editing ? `<div class="canvas-outline" aria-hidden="true" style="grid-area:${gridArea([0, 0, columns, rows], left, top)}"></div><div class="layout-expansion-outline" aria-hidden="true" hidden></div>` : '';
   // Cell proportions make the central columns × rows rectangle exactly 16:9.
@@ -118,31 +122,38 @@ export function renderProfileGrid(profile, layout, editing = false) {
 
 export const profileGridCss = `
 .profile-grid-viewport{container-type:inline-size;overflow:auto;padding:8px;max-width:1740px}
-.profile-grid{--canvas-width:min(100cqw,860px);display:grid;position:relative;isolation:isolate;grid-template-columns:repeat(var(--layout-columns),minmax(0,1fr));grid-template-rows:repeat(var(--layout-rows),minmax(0,1fr));width:calc(var(--canvas-width) * var(--layout-columns) / 12)}
+.profile-grid{--canvas-width:min(100cqw,860px);--award-size:64px;--level-size:65px;--username-size:30px;--progress-size:24px;display:grid;position:relative;isolation:isolate;grid-template-columns:repeat(var(--layout-columns),minmax(0,1fr));grid-template-rows:repeat(var(--layout-rows),minmax(0,1fr));width:calc(var(--canvas-width) * var(--layout-columns) / 12)}
 .layout-item{min-width:0;position:relative;display:flex;align-items:center;justify-content:flex-start;overflow-wrap:anywhere;z-index:2}
 .layout-item[data-item="box"]{z-index:0;display:block;pointer-events:none}
 .layout-item[data-item="box"] .profile-card-frame,.layout-item[data-item="box"] .profile-top{height:100%}
 .layout-item[data-item="box"] .profile-top{position:relative;isolation:isolate;padding:0;background-color:var(--profile-front,#19191e);border:1px solid var(--profile-border,#35353e)}
 .layout-item[data-item="box"] .profile-top::before{content:"";position:absolute;z-index:-1;inset:4px -4px -4px 4px;transform:rotate(-1deg);background:var(--profile-back,#111116);border:1px solid var(--profile-border,#30303b)}
 .layout-item[data-item="agency"]{z-index:1;pointer-events:none}
-.grid-agency{max-width:100%;max-height:100%;height:100%;width:100%;object-fit:contain;opacity:.3}
+.grid-agency{--agency-size:min(34vw,420px);width:calc(var(--agency-size) * var(--object-scale));height:calc(var(--agency-size) * var(--object-scale));max-width:none;flex:none;object-fit:contain;opacity:.3}
 .layout-item[data-item="username"] h1,.layout-item[data-item="title"] .profile-title,.layout-item .description{margin:0;padding:0 5px;min-width:0}
-.layout-item[data-item="username"] h1{overflow:visible;overflow-wrap:anywhere;font-size:calc(clamp(12px,var(--canvas-width) * .032,26px) * var(--object-scale));line-height:1.2;color:var(--profile-accent,inherit)}
-.layout-item[data-item="title"] .profile-title{font-size:calc(13px * var(--object-scale));line-height:1.3}
-.layout-item .description{white-space:pre-wrap;font-size:calc(14px * var(--object-scale));line-height:1.45;max-height:100%;overflow:auto}
+.layout-item[data-item="username"] h1{overflow:visible;overflow-wrap:anywhere;font-size:calc(var(--username-size) * var(--object-scale));line-height:1.2;color:var(--profile-accent,inherit)}
+.layout-item[data-item="title"] .profile-title{font-size:calc(14px * var(--object-scale));line-height:1.3}
+.layout-item .description{white-space:pre-wrap;font-size:calc(15px * var(--object-scale));line-height:1.45;max-height:100%;overflow:auto}
 .layout-item[data-item="level"]{flex-direction:column;justify-content:center;text-align:center;gap:3px}
-.layout-item[data-item="level"] .badge{width:min(100%,calc(44px * var(--object-scale)));max-height:calc(100% - 16px);height:auto;aspect-ratio:1;display:grid;place-items:center}
-.layout-item[data-item="level"] small{font-size:calc(11px * var(--object-scale));line-height:1.2}
-.profile-grid .layout-item .badge.level-icon{font-size:calc(13px * var(--object-scale))!important}
+.layout-item[data-item="level"] .badge{width:calc(var(--level-size) * var(--object-scale));height:calc(var(--level-size) * var(--object-scale));flex:none;display:grid;place-items:center}
+.layout-item[data-item="level"] small{font-size:calc(12.5px * var(--object-scale));line-height:1.2}
+.profile-grid .layout-item .badge.level-icon{font-size:calc(15px * var(--object-scale))!important}
 .profile-grid .layout-item .badge.level-icon[data-digits="3"]{font-size:calc(11px * var(--object-scale))!important}
 .profile-grid .layout-item .badge.level-icon[data-digits="4"]{font-size:calc(9px * var(--object-scale))!important}
 .profile-grid .layout-item .badge.level-icon[data-digits="5"]{font-size:calc(8px * var(--object-scale))!important}
-.layout-item .progress{width:100%;height:min(100%,calc(20px * var(--object-scale)));margin:0;position:relative;border:1px solid var(--profile-border,#34343b);background:#252529;overflow:hidden}
+.layout-item .progress{width:100%;height:calc(var(--progress-size) * var(--object-scale));margin:0;position:relative;border:1px solid var(--profile-border,#34343b);background:#252529;overflow:hidden}
 .layout-item .fill{height:100%;background:var(--skin)}
-.layout-item .progress-label{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(10px * var(--object-scale));color:white;text-shadow:0 1px 2px #000,0 0 3px #000}
-.layout-item .profile-award-item{width:auto;max-width:100%;height:min(100%,calc(44px * var(--object-scale)));aspect-ratio:1;flex:none}
+.layout-item .progress-label{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(11px * var(--object-scale));color:white;text-shadow:0 1px 2px #000,0 0 3px #000}
+.layout-item .profile-award-item{width:calc(var(--award-size) * var(--object-scale));height:calc(var(--award-size) * var(--object-scale));flex:none}
 .layout-item .profile-award-item .profile-award{width:100%;height:100%;object-fit:contain}
+.profile-grid .award-tooltip{position:absolute;inset:auto!important;max-width:min(210px,40cqw)}
+.profile-grid [data-tip-vertical="below"] .award-tooltip{top:calc(100% + 6px)!important}
+.profile-grid [data-tip-vertical="above"] .award-tooltip{bottom:calc(100% + 6px)!important}
+.profile-grid [data-tip-horizontal="left"] .award-tooltip{left:0!important}
+.profile-grid [data-tip-horizontal="right"] .award-tooltip{right:0!important}
 .layout-item:has(.profile-award-item:is(:focus,:hover)){z-index:4}
 .layout-mirror{transform:scaleX(-1)}
 main:has(.profile-grid){width:auto;max-width:none;margin-inline:clamp(18px,6vw,90px)}
+@media(max-width:780px){.profile-grid{--level-size:54px;--username-size:clamp(21px,5.7vw,28px);--progress-size:28px}.grid-agency{--agency-size:min(44vw,240px)}}
+@media(max-width:360px){.profile-grid{--level-size:46px;--award-size:56px}}
 `;

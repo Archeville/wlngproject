@@ -1,7 +1,7 @@
 import { accountState } from './account-state.mjs';
 import { profileThemeVariables, badgeCss, awardCss } from './cosmetics.mjs?v=20261112-layout1';
 import { profileCardCss } from './profile-cosmetics.mjs?v=20261112-layout1';
-import { columns, rows, placement, layoutItems, itemRect, resizeItem, gridArea, layoutBounds, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-grow1';
+import { columns, rows, placement, layoutItems, itemRect, resizeItem, gridArea, layoutBounds, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-fit2';
 import { levelProgress } from './levels.mjs';
 
 const dialog = document.querySelector('#profile-editor');

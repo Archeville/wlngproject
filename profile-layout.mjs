@@ -53,6 +53,15 @@ export function resizeItem(layout, id, scale) {
 export function gridArea([x, y, w, h], left, top) {
   return `${y - top + 1}/${x - left + 1}/span ${h}/span ${w}`;
 }
+
+export function layoutBounds(rectangles) {
+  return {
+    left: Math.min(0, ...rectangles.map(([x]) => x)),
+    top: Math.min(0, ...rectangles.map(([, y]) => y)),
+    right: Math.max(columns, ...rectangles.map(([x, , w]) => x + w)),
+    bottom: Math.max(rows, ...rectangles.map(([, y, , h]) => y + h))
+  };
+}
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 })[character]);
@@ -86,11 +95,12 @@ export function renderProfileGrid(profile, layout, editing = false) {
   }
   const items = Object.entries(content).filter(([, html]) => html);
   const rectangles = items.map(([id]) => itemRect(layout, id));
+  const bounds = layoutBounds(rectangles);
   const margin = editing ? 2 : 0;
-  const left = Math.max(placement.left, Math.min(0, ...rectangles.map(([x]) => x)) - margin);
-  const top = Math.max(placement.top, Math.min(0, ...rectangles.map(([, y]) => y)) - margin);
-  const right = Math.min(placement.right, Math.max(columns, ...rectangles.map(([x, , w]) => x + w)) + margin);
-  const bottom = Math.min(placement.bottom, Math.max(rows, ...rectangles.map(([, y, , h]) => y + h)) + margin);
+  const left = Math.max(placement.left, bounds.left - margin);
+  const top = Math.max(placement.top, bounds.top - margin);
+  const right = Math.min(placement.right, bounds.right + margin);
+  const bottom = Math.min(placement.bottom, bounds.bottom + margin);
   const width = right - left;
   const height = bottom - top;
   const markup = items.map(([id, html], index) => {
@@ -99,14 +109,16 @@ export function renderProfileGrid(profile, layout, editing = false) {
     const mirrored = frame === 'reversed' && ['username', 'level', 'title'].includes(id) && within(rect, itemRect(layout, 'box'));
     return `<div class="layout-item${mirrored ? ' layout-mirror' : ''}" data-item="${id}" style="grid-area:${gridArea(rect, left, top)};--object-scale:${scale}">${html}</div>`;
   }).join('');
-  const guide = editing ? `<div class="canvas-outline" aria-hidden="true" style="grid-area:${gridArea([0, 0, columns, rows], left, top)}"></div>` : '';
+  const guide = editing ? `<div class="canvas-outline" aria-hidden="true" style="grid-area:${gridArea([0, 0, columns, rows], left, top)}"></div><div class="layout-expansion-outline" aria-hidden="true" hidden></div>` : '';
   // Cell proportions make the central columns × rows rectangle exactly 16:9.
   const aspect = `${width * 16 * rows}/${height * 9 * columns}`;
-  return `<section class="profile-grid${editing ? ' editing' : ''}" aria-label="Profile layout" data-left="${left}" data-top="${top}" data-columns="${width}" data-rows="${height}" style="--layout-columns:${width};--layout-rows:${height};aspect-ratio:${aspect};--skin:${skinPaint(profile.skin, level)}">${guide}${markup}</section>`;
+  const grid = `<section class="profile-grid${editing ? ' editing' : ''}" aria-label="Profile layout" data-left="${left}" data-top="${top}" data-columns="${width}" data-rows="${height}" style="--layout-columns:${width};--layout-rows:${height};aspect-ratio:${aspect};--skin:${skinPaint(profile.skin, level)}">${guide}${markup}</section>`;
+  return editing ? grid : `<div class="profile-grid-viewport"${width > columns ? ' tabindex="0" role="region" aria-label="Scrollable profile layout"' : ''}>${grid}</div>`;
 }
 
 export const profileGridCss = `
-.profile-grid{display:grid;position:relative;isolation:isolate;grid-template-columns:repeat(var(--layout-columns),minmax(0,1fr));grid-template-rows:repeat(var(--layout-rows),minmax(0,1fr));width:100%;max-width:860px;container-type:inline-size}
+.profile-grid-viewport{container-type:inline-size;overflow:auto;padding:8px;max-width:1740px}
+.profile-grid{--canvas-width:min(100cqw,860px);display:grid;position:relative;isolation:isolate;grid-template-columns:repeat(var(--layout-columns),minmax(0,1fr));grid-template-rows:repeat(var(--layout-rows),minmax(0,1fr));width:calc(var(--canvas-width) * var(--layout-columns) / 12)}
 .layout-item{min-width:0;position:relative;display:flex;align-items:center;justify-content:flex-start;overflow-wrap:anywhere;z-index:2}
 .layout-item[data-item="box"]{z-index:0;display:block;pointer-events:none}
 .layout-item[data-item="box"] .profile-card-frame,.layout-item[data-item="box"] .profile-top{height:100%}
@@ -115,7 +127,7 @@ export const profileGridCss = `
 .layout-item[data-item="agency"]{z-index:1;pointer-events:none}
 .grid-agency{max-width:100%;max-height:100%;height:100%;width:100%;object-fit:contain;opacity:.3}
 .layout-item[data-item="username"] h1,.layout-item[data-item="title"] .profile-title,.layout-item .description{margin:0;padding:0 5px;min-width:0}
-.layout-item[data-item="username"] h1{overflow:visible;overflow-wrap:anywhere;font-size:calc(clamp(12px,3.2cqw,26px) * var(--object-scale));line-height:1.2;color:var(--profile-accent,inherit)}
+.layout-item[data-item="username"] h1{overflow:visible;overflow-wrap:anywhere;font-size:calc(clamp(12px,var(--canvas-width) * .032,26px) * var(--object-scale));line-height:1.2;color:var(--profile-accent,inherit)}
 .layout-item[data-item="title"] .profile-title{font-size:calc(13px * var(--object-scale));line-height:1.3}
 .layout-item .description{white-space:pre-wrap;font-size:calc(14px * var(--object-scale));line-height:1.45;max-height:100%;overflow:auto}
 .layout-item[data-item="level"]{flex-direction:column;justify-content:center;text-align:center;gap:3px}
@@ -132,5 +144,5 @@ export const profileGridCss = `
 .layout-item .profile-award-item .profile-award{width:100%;height:100%;object-fit:contain}
 .layout-item:has(.profile-award-item:is(:focus,:hover)){z-index:4}
 .layout-mirror{transform:scaleX(-1)}
-main:has(.profile-grid){width:auto;max-width:860px;margin-inline:clamp(18px,6vw,90px)}
+main:has(.profile-grid){width:auto;max-width:none;margin-inline:clamp(18px,6vw,90px)}
 `;

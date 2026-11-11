@@ -44,17 +44,22 @@
   min-width: 0;
   max-height: min(76vh,790px);
   overflow: auto;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
   padding: 12px;
   border: 1px solid var(--border,#36363a);
   background: var(--profile-bg,#131318);
   color: #f1f1f3;
+  container-type: inline-size;
 }
 .profile-grid.editing {
+  --canvas-width: min(calc(100cqw * 12 / 14),860px);
   background-image: linear-gradient(to right,#aaa3 1px,transparent 1px),linear-gradient(to bottom,#aaa3 1px,transparent 1px);
   background-size: calc(100% / var(--layout-columns)) calc(100% / var(--layout-rows));
   box-shadow: inset -1px -1px #aaa3;
 }
 .canvas-outline { position:relative; pointer-events:none; background:#aaa1; outline:1px solid #ab97ff; outline-offset:-1px; z-index:-1; }
+.layout-expansion-outline { pointer-events:none; border:2px dashed #ffbe72; z-index:5; }
 .profile-grid.editing .layout-item {
   cursor: grab;
   pointer-events: auto;

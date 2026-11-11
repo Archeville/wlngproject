@@ -1,4 +1,4 @@
-import { renderProfileGrid, profileGridCss } from './profile-layout.mjs?v=20261112-canvas1';
+import { renderProfileGrid, profileGridCss } from './profile-layout.mjs?v=20261112-grow1';
 import { profileCardCss, profileFrames, profileTitles } from './profile-cosmetics.mjs?v=20261112-layout1';
 import { skinPaint, badgeStyle, profileThemeCss, profileAwards, awardCss, profileIcons, profileIconCss, profileResponsiveCss } from './cosmetics.mjs?v=20261112-layout1';
 const view=document.querySelector('main');

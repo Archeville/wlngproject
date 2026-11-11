@@ -1,7 +1,7 @@
 import { accountState } from './account-state.mjs';
 import { profileThemeVariables, badgeCss, awardCss } from './cosmetics.mjs?v=20261112-layout1';
 import { profileCardCss } from './profile-cosmetics.mjs?v=20261112-layout1';
-import { placement, layoutItems, itemRect, resizeItem, gridArea, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-canvas1';
+import { columns, rows, placement, layoutItems, itemRect, resizeItem, gridArea, layoutBounds, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-grow1';
 import { levelProgress } from './levels.mjs';
 
 const dialog = document.querySelector('#profile-editor');
@@ -63,16 +63,27 @@ function syncControls() {
   const handle = stage.querySelector('.editor-move-handle');
   if (handle) {
     const grid = handle.parentElement;
-    handle.style.gridArea = gridArea(itemRect(draft, selected), Number(grid.dataset.left), Number(grid.dataset.top));
+    const left = Number(grid.dataset.left);
+    const top = Number(grid.dataset.top);
+    handle.style.gridArea = gridArea(itemRect(draft, selected), left, top);
     handle.firstElementChild.title = 'Drag ' + layoutItems[selected][0].toLowerCase();
     handle.hidden = !ready();
+    const { left: edgeX, top: edgeY, right, bottom } = layoutBounds(
+      [...grid.querySelectorAll('[data-item]')].map(tile => itemRect(draft, tile.dataset.item))
+    );
+    const outline = grid.querySelector('.layout-expansion-outline');
+    outline.style.gridArea = gridArea([edgeX, edgeY, right - edgeX, bottom - edgeY], left, top);
+    outline.hidden = edgeX === 0 && edgeY === 0 && right === columns && bottom === rows;
   }
   save.disabled = !ready() || !changed();
   reset.disabled = !ready() || draft === null;
   undo.disabled = !ready() || !changed();
 }
 
-function render() {
+function render(center = false) {
+  const previousCanvas = stage.querySelector('.canvas-outline');
+  const previousX = stage.scrollLeft - (previousCanvas?.offsetLeft || 0);
+  const previousY = stage.scrollTop - (previousCanvas?.offsetTop || 0);
   const profile = previewData();
   stage.removeAttribute('style');
   for (const [key, value] of Object.entries(profileThemeVariables(profile.profileTheme))) stage.style.setProperty(key, value);
@@ -82,6 +93,9 @@ function render() {
   if (!tiles.some(tile => tile.dataset.item === selected)) selected = 'username';
   list.replaceChildren(...tiles.map(tile => new Option(layoutItems[tile.dataset.item][0], tile.dataset.item)));
   syncControls();
+  const canvas = stage.querySelector('.canvas-outline');
+  stage.scrollLeft = canvas.offsetLeft + (center ? -canvas.offsetWidth / 24 : previousX);
+  stage.scrollTop = canvas.offsetTop + (center ? -canvas.offsetHeight / 30 : previousY);
 }
 
 function setRect(id, rect, repaint = true) {
@@ -129,7 +143,7 @@ function showEditor() {
   draft = saved;
   status.textContent = state.userId ? 'Drag elements or use the position and size controls.' : 'Sign in to save a layout.';
   dialog.showModal();
-  render();
+  render(true);
   void loadDetails();
   if (state.userId && !state.record) void accountState.load();
 }
@@ -183,7 +197,8 @@ stage.addEventListener('pointerdown', event => {
     ['left', 'top', 'columns', 'rows'].map(key => [key, Number(grid.dataset[key])])
   );
   drag = {
-    pointerId: event.pointerId, x: event.clientX, y: event.clientY, scroll: stage.scrollTop,
+    pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+    scrollLeft: stage.scrollLeft, scrollTop: stage.scrollTop,
     left, top, right: left + columns, bottom: top + rows,
     cellWidth: grid.clientWidth / columns, cellHeight: grid.clientHeight / rows,
     rect: itemRect(draft, selected)
@@ -194,8 +209,8 @@ stage.addEventListener('pointerdown', event => {
 stage.addEventListener('pointermove', event => {
   if (drag?.pointerId !== event.pointerId) return;
   const [x, y, w, h, ...size] = drag.rect;
-  const dx = Math.round((event.clientX - drag.x) / drag.cellWidth);
-  const dy = Math.round((event.clientY - drag.y + stage.scrollTop - drag.scroll) / drag.cellHeight);
+  const dx = Math.round((event.clientX - drag.x + stage.scrollLeft - drag.scrollLeft) / drag.cellWidth);
+  const dy = Math.round((event.clientY - drag.y + stage.scrollTop - drag.scrollTop) / drag.cellHeight);
   setRect(selected, [clamp(x + dx, drag.left, drag.right - w), clamp(y + dy, drag.top, drag.bottom - h), w, h, ...size], false);
 });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {

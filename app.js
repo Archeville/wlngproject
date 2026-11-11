@@ -82,16 +82,152 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
       $('#updated').textContent = stamp && !Number.isNaN(stamp.valueOf()) ? `${data.stale ? 'CACHED · ' : ''}UPDATED ${stamp.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` : 'STREAM FEED CONNECTED'; render();
     } catch { $('#updated').textContent = 'CONNECTION INTERRUPTED'; message('<strong>We couldn’t load the stream feed.</strong><br>Please try again in a little while.'); }
   }
-  function play(id) {
-    const item = state.streams.find(x => x.id === id); if (!item || !validId(id)) return;
+  function play(id, fromShare = false) {
+    if (!validId(id)) return;
+    const item = state.streams.find(x => x.id === id) ?? (fromShare ? { id, title: 'YouTube stream' } : null);
+    if (!item) return;
+    if (playerDialog.classList.contains('is-mini')) {
+      if (state.playerId === id) { restoreMini(); return; }
+      playerDialog.close();
+      playerDialog.classList.remove('is-mini');
+      miniControls.hidden = true;
+      miniAnimation?.cancel();
+    }
     closePip(false);pipStatus('');
     $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); renderRelated(item); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     const viewers=$('#player-viewers');const hasViewers=streamStatus(item)==='live'&&Number.isFinite(item.live_viewers)&&item.live_viewers>=0;viewers.hidden=!hasViewers;viewers.textContent=hasViewers?new Intl.NumberFormat().format(item.live_viewers)+' watching':'';
-    $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || '';
+    $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || 'YouTube';
+    shareStatus.hidden = true;
+    clearTimeout(shareTimer);
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     $('#chat-youtube-link').href = $('#youtube-link').href;
     const frame = document.createElement('iframe'); frame.src = new URL('player-embed.html?video='+encodeURIComponent(id),location.href).href; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
   }
+  const playerDialog = $('#player-dialog');
+  const miniControls = $('.mini-controls');
+  const miniResize = $('#mini-resize');
+  const miniSetting = $('#mini-on-close');
+  const shareStatus = $('#watch-share-status');
+  const watchClose = $('#watch-close');
+  let shareTimer, miniAnimation, miniDrag, watchScroll;
+  let miniWidth = Number(pref('wlng-mini-width')) || 340;
+  miniSetting.checked = pref('wlng-mini-on-close') !== 'false';
+  function labelPlayerClose() {
+    const label = miniSetting.checked ? 'Minimize player' : 'Close player';
+    watchClose.setAttribute('aria-label', label);
+    watchClose.title = label;
+  }
+  labelPlayerClose();
+  miniSetting.addEventListener('change', () => {
+    pref('wlng-mini-on-close', String(miniSetting.checked));
+    labelPlayerClose();
+  });
+  $('#watch-share').addEventListener('click', async () => {
+    const id = state.playerId;
+    if (!validId(id)) return;
+    const link = new URL('./', location.href);
+    link.searchParams.set('watch', id);
+    try {
+      await navigator.clipboard.writeText(link.href);
+      if (state.playerId !== id) return;
+      shareStatus.textContent = 'WLNG link copied';
+      shareStatus.hidden = false;
+      clearTimeout(shareTimer);
+      shareTimer = setTimeout(() => { shareStatus.hidden = true; }, 2500);
+    } catch {
+      window.prompt('Copy the WLNG stream link', link.href);
+    }
+  });
+  function applyMiniWidth(width = miniWidth) {
+    const max = Math.max(1, Math.floor(Math.min(640, innerWidth - 24, (innerHeight - 80) * 16 / 9)));
+    const min = Math.min(220, max);
+    const actual = Math.round(Math.max(min, Math.min(max, width)));
+    playerDialog.style.setProperty('--mini-width', actual + 'px');
+    miniResize.setAttribute('aria-valuemin', String(min));
+    miniResize.setAttribute('aria-valuemax', String(max));
+    miniResize.setAttribute('aria-valuenow', String(actual));
+    miniResize.setAttribute('aria-valuetext', actual + ' pixels');
+    return actual;
+  }
+  function animatePlayerMove(before) {
+    const after = $('#player-slot').getBoundingClientRect();
+    if (!before.width || !before.height || !after.width || !after.height) return;
+    miniAnimation = animate(playerDialog, [
+      { transformOrigin: 'top left', transform: `translate(${before.left - after.left}px,${before.top - after.top}px) scale(${before.width / after.width},${before.height / after.height})` },
+      { transformOrigin: 'top left', transform: 'none' }
+    ], { duration: 320 });
+  }
+  async function minimizePlayer() {
+    if (!playerDialog.open || playerDialog.classList.contains('is-mini') || closingDialogs.has(playerDialog)) return;
+    if (!miniSetting.checked) { closeDialog(playerDialog); return; }
+    if (document.fullscreenElement && playerDialog.contains(document.fullscreenElement)) {
+      try { await document.exitFullscreen(); } catch { closeDialog(playerDialog); return; }
+      if (!playerDialog.open || playerDialog.classList.contains('is-mini')) return;
+    }
+    if (operaPipDialog.open) operaPipDialog.close();
+    closePip();
+    miniAnimation?.cancel();
+    const before = $('#player-slot').getBoundingClientRect();
+    watchScroll = [$('#watch-main').scrollTop, $('#watch-shell').scrollTop];
+    playerDialog.close();
+    playerDialog.classList.add('is-mini');
+    miniControls.hidden = false;
+    applyMiniWidth();
+    // Keep the iframe in the same DOM node when switching modal modes.
+    playerDialog.show();
+    $('#mini-restore').focus({ preventScroll: true });
+    animatePlayerMove(before);
+  }
+  function restoreMini() {
+    if (!playerDialog.open || !playerDialog.classList.contains('is-mini')) return;
+    miniAnimation?.cancel();
+    const before = $('#player-slot').getBoundingClientRect();
+    playerDialog.close();
+    playerDialog.classList.remove('is-mini');
+    miniControls.hidden = true;
+    closeMobileNavigation();
+    playerDialog.showModal();
+    if (watchScroll) {
+      $('#watch-main').scrollTop = watchScroll[0];
+      $('#watch-shell').scrollTop = watchScroll[1];
+    }
+    watchClose.focus({ preventScroll: true });
+    animatePlayerMove(before);
+  }
+  watchClose.addEventListener('click', () => { void minimizePlayer(); });
+  $('#mini-restore').addEventListener('click', restoreMini);
+  $('#mini-close').addEventListener('click', () => {
+    miniAnimation?.cancel();
+    playerDialog.close();
+  });
+  miniResize.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    miniAnimation?.cancel();
+    miniDrag = { id: event.pointerId, x: event.clientX, width: Number(miniResize.getAttribute('aria-valuenow')) };
+    miniResize.setPointerCapture(event.pointerId);
+  });
+  miniResize.addEventListener('pointermove', event => {
+    if (miniDrag?.id === event.pointerId) applyMiniWidth(miniDrag.width + miniDrag.x - event.clientX);
+  });
+  function saveMiniWidth(width) {
+    miniWidth = applyMiniWidth(width);
+    pref('wlng-mini-width', String(miniWidth));
+  }
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    miniResize.addEventListener(type, event => {
+      if (miniDrag?.id !== event.pointerId) return;
+      miniDrag = null;
+      saveMiniWidth(Number(miniResize.getAttribute('aria-valuenow')));
+    });
+  }
+  miniResize.addEventListener('keydown', event => {
+    const size = Number(miniResize.getAttribute('aria-valuenow'));
+    const next = { ArrowLeft:size + 20, ArrowUp:size + 20, ArrowRight:size - 20, ArrowDown:size - 20, Home:0, End:640 }[event.key];
+    if (!Number.isFinite(next)) return;
+    event.preventDefault();
+    saveMiniWidth(next);
+  });
+  window.addEventListener('resize', () => { if (playerDialog.classList.contains('is-mini')) applyMiniWidth(); });
   function renderRelated(item) {
     const label=item.channel?.org==='Independents'?'Indie':item.channel?.org;
     $('#related-heading').textContent=label?label+' · Other live streams':'Other live streams';
@@ -221,7 +357,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#nav-shade').addEventListener('click',()=>closeMobileNavigation(true));
   $('#search').addEventListener('focus',()=>closeMobileNavigation());
   document.addEventListener('keydown',event=>{
-    if(!mobile.matches||!document.body.classList.contains('nav-collapsed')||document.querySelector('dialog[open]'))return;
+    if(!mobile.matches||!document.body.classList.contains('nav-collapsed')||document.querySelector('dialog[open]:not(.is-mini)'))return;
     if(event.key==='Escape'){event.preventDefault();closeMobileNavigation(true);return;}
     if(event.key!=='Tab')return;
     const stops=[$('#menu-toggle'),...[...$('#sidebar').querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled)')].filter(el=>el.getClientRects().length&&!el.closest('[hidden],[inert]'))];
@@ -234,11 +370,25 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   document.querySelectorAll('dialog').forEach(dialog => {
     dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(dialog); });
     dialog.addEventListener('click', event => {
+      if (dialog.classList.contains('is-mini')) return;
       const rect = dialog.getBoundingClientRect();
       if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
     });
   });
-  $('#player-dialog').addEventListener('close', () => { if(operaPipDialog.open)operaPipDialog.close();stopPanelDrag();closePip(false); $('#player-slot').replaceChildren(); $('#chat-slot').replaceChildren(); if (document.fullscreenElement && $('#player-dialog').contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {}); });
+  playerDialog.addEventListener('close', () => {
+    // Switching between modal and corner mode closes and immediately reopens the dialog.
+    if (playerDialog.open) return;
+    if (operaPipDialog.open) operaPipDialog.close();
+    stopPanelDrag();
+    closePip(false);
+    playerDialog.classList.remove('is-mini');
+    miniControls.hidden = true;
+    miniDrag = null;
+    state.playerId = null;
+    $('#player-slot').replaceChildren();
+    $('#chat-slot').replaceChildren();
+    if (document.fullscreenElement && playerDialog.contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {});
+  });
   function showWatchPanel(panel) {
     $('#watch-activity').hidden = panel !== 'activity'; $('#watch-chat').hidden = panel !== 'chat';
     document.querySelectorAll('[data-watch-panel]').forEach(button => { const active = button.dataset.watchPanel === panel; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', String(active)); });
@@ -263,7 +413,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   document.addEventListener('fullscreenchange', () => { const active = document.fullscreenElement === watchShell; fullscreenButton.textContent = active ? 'Exit fullscreen' : 'Fullscreen'; fullscreenButton.setAttribute('aria-pressed', String(active)); });
   $('#watch-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('#youtube-link').href); $('#watch-message').textContent = 'YouTube link copied.'; } catch { $('#watch-message').textContent = 'Copy the link using Open on YouTube.'; } });
   $('#watch-dim').addEventListener('input',event=>{const value=Number(event.target.value);$('#player-dialog').style.setProperty('--watch-shade','rgba(0,0,0,'+value/100+')');event.target.style.setProperty('--dim-fill',value/90*100+'%');$('#watch-dim-value').value=value+'%';event.target.setAttribute('aria-valuetext',value+'% darker');});
-  document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea/i.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); $('#search').focus(); } });
+  document.addEventListener('keydown', e => { if (e.key === '/' && !/input|textarea/i.test(document.activeElement.tagName) && !document.querySelector('dialog[open]:not(.is-mini)')) { e.preventDefault(); $('#search').focus(); } });
   function setTheme(value) {
     const theme = ['white', 'black', 'black-purple'].includes(value) ? value : 'black';
     document.documentElement.dataset.theme = theme;
@@ -292,5 +442,9 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#density-toggle').addEventListener('click', () => setDensity(document.body.classList.contains('compact') ? 'comfortable' : 'compact'));
   let lastFeedRequest=0,feedPending=false;
   window.addEventListener('wlng-refresh-streams',()=>{if(feedPending||Date.now()-lastFeedRequest<30000){window.dispatchEvent(new Event('wlng-feed-refreshed'));return;}lastFeedRequest=Date.now();feedPending=true;load().finally(()=>{feedPending=false;window.dispatchEvent(new Event('wlng-feed-refreshed'));});});
-  lastFeedRequest=Date.now();load();
+  lastFeedRequest=Date.now();
+  const sharedId = new URLSearchParams(location.search).get('watch');
+  void load().then(() => {
+    if (validId(sharedId) && !state.playerId) play(sharedId, true);
+  });
 })();

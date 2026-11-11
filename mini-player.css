@@ -1,0 +1,40 @@
+.watch-channel-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+#watch-share {
+  display:inline-grid; place-items:center; padding:0; width:28px; height:28px;
+  border:0; border-radius:5px; background:transparent; color:var(--muted); cursor:pointer;
+}
+#watch-share svg { width:17px; height:17px; }
+#watch-share:is(:hover,:focus-visible) { color:var(--accent-strong); background:var(--raised); }
+#watch-share-status { color:var(--muted); font-size:12px; }
+
+#player-dialog.is-mini {
+  position:fixed; inset:auto max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) auto;
+  width:var(--mini-width,340px); height:auto; max-width:none; max-height:none;
+  margin:0; padding:0; border:1px solid var(--border); border-radius:9px;
+  background:#0a0a0c; box-shadow:0 10px 35px #0007; z-index:50;
+  transform-origin:top left; overflow:hidden;
+}
+#player-dialog.is-mini .watch-shell { height:auto; overflow:hidden; padding:0; }
+#player-dialog.is-mini :is(.watch-top,.watch-side,.watch-resizer,.player-info,.watch-toolbar,.watch-message,.watch-description) { display:none; }
+#player-dialog.is-mini .watch-layout { display:block; height:auto; }
+#player-dialog.is-mini .watch-main { display:block; padding:0; overflow:hidden; }
+#player-dialog.is-mini .player-slot {
+  position:relative; top:auto; display:block; width:100%; height:auto; min-height:0; max-height:none;
+  aspect-ratio:16/9; margin:0; border-radius:0;
+}
+.mini-controls:not([hidden]) {
+  display:flex; align-items:center; gap:3px; height:32px; padding:0 3px 0 8px;
+  border-bottom:1px solid var(--border); background:var(--surface); color:var(--muted);
+}
+#mini-resize {
+  display:flex; align-items:center; flex:1; height:100%; min-width:0;
+  cursor:nwse-resize; touch-action:none; user-select:none;
+}
+#mini-resize::before { content:""; width:24px; height:3px; border-radius:2px; background:currentColor; opacity:.55; }
+.mini-icon {
+  display:grid; place-items:center; width:30px; height:28px; padding:0;
+  border:0; border-radius:4px; background:transparent; color:inherit; cursor:pointer;
+}
+.mini-icon svg { width:16px; height:16px; }
+.mini-icon:is(:hover,:focus-visible) { background:var(--raised); color:var(--text); }
+@media(max-width:780px) { #watch-share { width:36px; height:36px; } }

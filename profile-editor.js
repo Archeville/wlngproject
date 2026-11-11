@@ -1,7 +1,7 @@
 import { accountState } from './account-state.mjs';
 import { profileThemeVariables, badgeCss, awardCss } from './cosmetics.mjs?v=20261112-layout1';
 import { profileCardCss } from './profile-cosmetics.mjs?v=20261112-layout1';
-import { columns, rows, rowHeight, layoutItems, itemRect, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-layout1';
+import { columns, rows, rowHeight, layoutItems, itemRect, resizeItem, renderProfileGrid, profileGridCss, validProfileLayout } from './profile-layout.mjs?v=20261112-size1';
 import { levelProgress } from './levels.mjs';
 
 const dialog = document.querySelector('#profile-editor');
@@ -12,6 +12,7 @@ const reset = dialog.querySelector('#editor-reset');
 const undo = dialog.querySelector('#editor-revert');
 const status = dialog.querySelector('#editor-status');
 const inputs = [...dialog.querySelectorAll('[data-coordinate]')];
+const sizes = [...dialog.querySelectorAll('[data-object-scale]')];
 const styles = document.createElement('style');
 styles.textContent = badgeCss + awardCss + profileGridCss + profileCardCss;
 document.head.append(styles);
@@ -37,7 +38,7 @@ function previewData() {
 }
 
 function syncControls() {
-  const [x, y, w, h] = itemRect(draft, selected);
+  const [x, y, w, h, scale = 1] = itemRect(draft, selected);
   const limits = [[x + 1, columns - w + 1], [y + 1, rows - h + 1], [w, columns - x], [h, rows - y]];
   for (const [index, input] of inputs.entries()) {
     input.value = limits[index][0];
@@ -45,6 +46,10 @@ function syncControls() {
     input.disabled = !ready();
   }
   list.value = selected;
+  for (const button of sizes) {
+    button.disabled = !ready();
+    button.setAttribute('aria-pressed', String(Number(button.dataset.objectScale) === scale));
+  }
   for (const tile of stage.querySelectorAll('[data-item]')) {
     tile.classList.toggle('selected', tile.dataset.item === selected);
   }
@@ -139,6 +144,13 @@ accountState.subscribe(next => {
 });
 
 list.addEventListener('change', () => { selected = list.value; syncControls(); });
+for (const button of sizes) {
+  button.addEventListener('click', () => {
+    const scale = Number(button.dataset.objectScale);
+    if ((itemRect(draft, selected)[4] ?? 1) === scale) return;
+    setRect(selected, resizeItem(draft, selected, scale));
+  });
+}
 inputs.forEach((input, index) => input.addEventListener('change', () => {
   const rect = [...itemRect(draft, selected)];
   if (!Number.isInteger(input.valueAsNumber)) { syncControls(); return; }
@@ -157,10 +169,10 @@ stage.addEventListener('pointerdown', event => {
 });
 stage.addEventListener('pointermove', event => {
   if (drag?.pointerId !== event.pointerId) return;
-  const [x, y, w, h] = drag.rect;
+  const [x, y, w, h, ...size] = drag.rect;
   const dx = Math.round((event.clientX - drag.x) / drag.cellWidth);
   const dy = Math.round((event.clientY - drag.y + stage.scrollTop - drag.scroll) / rowHeight);
-  setRect(selected, [clamp(x + dx, 0, columns - w), clamp(y + dy, 0, rows - h), w, h], false);
+  setRect(selected, [clamp(x + dx, 0, columns - w), clamp(y + dy, 0, rows - h), w, h, ...size], false);
 });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
   stage.addEventListener(type, event => {

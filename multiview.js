@@ -1,6 +1,6 @@
 import {GRID,geometry,normalizeLayout,normalizeSaves,liveForChannel,clampCamera} from './multiview-model.mjs?v=20261109-chat4';
 import {matchesFavoriteTab} from './favorites-model.mjs?v=20261112-favoriteviewers1';
-import {streamLibrary,streamStatus} from './stream-library.mjs?v=20261112-streamtools1';
+import {streamLibrary,streamStatus} from './stream-library.mjs?v=20261112-avatars1';
 const $=s=>document.querySelector(s),panel=$('#multiview'),canvas=$('#mv-canvas'),viewport=$('#mv-viewport');
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 let layout=normalizeLayout(read('wlng-multiview-draft',{})),saves=normalizeSaves(read('wlng-multiview-saves',[])),streams=window.WLNG_STREAMS||[],active=false,drag=null,refreshUntil=0,lastFeedAt=Date.now();

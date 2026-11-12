@@ -1,7 +1,7 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
 import { setupFavorites } from './favorites.js?v=20261112-streamtools1';
-import { streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-streamtools1';
-import { setupStreamTools } from './stream-tools.js?v=20261112-streamtools1';
+import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-avatars1';
+import { setupStreamTools } from './stream-tools.js?v=20261112-avatars1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null, playerItem: null };
@@ -45,7 +45,6 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-streamtools1';
     tabs.style.setProperty('--tab-width', `${selected.offsetWidth}px`);
   }
   const validId = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id);
-  const safeImage = (url) => { try { const u = new URL(url); return u.protocol === 'https:' && (u.hostname.endsWith('.googleusercontent.com') || u.hostname.endsWith('.ggpht.com')) ? u.href : ''; } catch { return ''; } };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const time = (value) => { const d = new Date(value); return Number.isNaN(d.valueOf()) ? 'Time to be announced' : new Intl.DateTimeFormat(undefined, { weekday:'short', hour:'numeric', minute:'2-digit', month:'short', day:'numeric' }).format(d); };
   const message = (html) => { $('#status').innerHTML = html; $('#status').hidden = false; };
@@ -68,7 +67,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-streamtools1';
     $('#result-label').innerHTML = `${items.length} STREAM${items.length === 1 ? '' : 'S'} <b>✧</b>`;
     $('#grid').innerHTML = items.map(x => {
       const name = x.channel?.english_name || x.channel?.name || 'Unknown channel';
-      const photo = safeImage(x.channel?.photo); const label = streamStatus(x) === 'live' ? '● LIVE' : esc(time(x.start_scheduled || x.available_at));
+      const photo = safeChannelPhoto(x.channel?.photo); const label = streamStatus(x) === 'live' ? '● LIVE' : esc(time(x.start_scheduled || x.available_at));
       const viewers = Number.isFinite(x.live_viewers) ? `${new Intl.NumberFormat().format(x.live_viewers)} watching` : '';
       return `<article class="card" data-id="${esc(x.id)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div><button class="stream-card-open" type="button" aria-label="Watch ${esc(x.title)}"></button><button class="stream-hide-trigger" type="button" aria-label="Hide options for ${esc(x.title)}" title="Hide options">⋯</button></article>`;
     }).join('');

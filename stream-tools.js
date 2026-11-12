@@ -1,4 +1,4 @@
-import { channelName, creatorPlans, streamLibrary, validVideoId } from './stream-library.mjs?v=20261112-streamtools1';
+import { channelName, creatorPlans, safeChannelPhoto, streamLibrary, validVideoId } from './stream-library.mjs?v=20261112-avatars1';
 
 export function setupStreamTools({ openDialog, closeDialog, play, onVisibilityChange, time }) {
   const $ = id => document.getElementById(id);
@@ -108,21 +108,51 @@ export function setupStreamTools({ openDialog, closeDialog, play, onVisibilityCh
     },
     renderCreators(tab, streams, loaded) {
       const panel = $('favorite-creators');
-      panel.hidden = tab.type !== 'channels' || !tab.channels.length;
-      if (panel.hidden) return;
+      const ids = tab.id === 'favorites' ? tab.channels.filter(id => !streamLibrary.creatorHidden(id)) : [];
+      panel.hidden = ids.length === 0;
+      if (!ids.length) return;
       const plans = creatorPlans(streams.filter(stream => !streamLibrary.isHidden(stream)));
-      const names = new Map(streams.map(stream => [stream.channel?.id, channelName(stream.channel)]));
-      $('favorite-creator-count').textContent = String(tab.channels.length);
-      $('favorite-creator-list').replaceChildren(...tab.channels.map(id => {
+      ids.sort((a, b) => Number(plans.get(b)?.status === 'live') - Number(plans.get(a)?.status === 'live'));
+      $('favorite-creator-list').replaceChildren(...ids.map(id => {
         const plan = plans.get(id);
-        const name = names.get(id) || streamLibrary.creator(id) || 'Channel …' + id.slice(-7);
-        const state = streamLibrary.creatorHidden(id) ? 'Hidden in this browser'
-          : plan?.status === 'live' ? 'Live now'
+        const cached = streamLibrary.creator(id);
+        const name = channelName(plan?.stream.channel) || cached.name || 'Channel …' + id.slice(-7);
+        const photo = safeChannelPhoto(plan?.stream.channel?.photo) || cached.photo;
+        const state = plan?.status === 'live' ? 'Live now'
           : plan ? 'Scheduled · ' + time(plan.stream.start_scheduled || plan.stream.available_at)
-          : loaded ? 'Nothing in the schedule' : 'Waiting for the stream feed';
-        const row = listRow(name, state);
+          : loaded ? 'Offline' : 'Waiting for the stream feed';
+        const row = document.createElement('li');
         row.dataset.creatorStatus = plan?.status || 'offline';
-        if (plan) row.append(action('Open', () => play(plan.stream.id)));
+        const control = document.createElement(plan ? 'button' : 'a');
+        control.className = 'creator-avatar';
+        control.title = name + ' · ' + state;
+        control.setAttribute('aria-label', control.title + (plan ? ' · Open stream' : ' · Open YouTube channel'));
+        if (plan) {
+          control.type = 'button';
+          control.addEventListener('click', () => play(plan.stream.id));
+        } else {
+          control.href = 'https://www.youtube.com/channel/' + encodeURIComponent(id);
+          control.target = '_blank';
+          control.rel = 'noopener';
+        }
+        const placeholder = document.createElement('span');
+        placeholder.className = 'creator-avatar-initial';
+        placeholder.textContent = cached.name || channelName(plan?.stream.channel) ? [...name][0].toUpperCase() : '♡';
+        placeholder.setAttribute('aria-hidden', 'true');
+        control.append(placeholder);
+        if (photo) {
+          const image = document.createElement('img');
+          image.alt = '';
+          image.loading = 'lazy';
+          image.addEventListener('error', () => image.remove(), { once: true });
+          image.src = photo;
+          control.append(image);
+        }
+        const dot = document.createElement('span');
+        dot.className = 'creator-avatar-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        control.append(dot);
+        row.append(control);
         return row;
       }));
     }

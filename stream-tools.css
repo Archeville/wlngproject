@@ -10,13 +10,26 @@
 }
 .stream-hide-trigger:is(:hover,:focus-visible) { background:#000; border-color:#fff9; }
 #stream-tool-notice:empty { display:none; }
-.creator-status-panel {
-  margin:12px 0 0; padding:9px 11px; border:1px solid var(--border); border-radius:8px;
-  background:var(--surface); color:var(--text);
+.creator-avatar-list {
+  display:flex; gap:8px; margin:7px 0 0; padding:4px 4px 6px; list-style:none;
+  overflow-x:auto; scrollbar-width:thin;
 }
-.creator-status-panel[hidden] { display:none; }
-.creator-status-panel summary { cursor:pointer; font-size:13px; font-weight:650; }
-.creator-status-panel summary .count { margin-left:5px; }
+.creator-avatar-list li { flex:none; }
+.creator-avatar {
+  position:relative; display:grid; place-items:center; width:30px; height:30px; padding:0;
+  border:1px solid var(--border); border-radius:50%; background:var(--raised);
+  color:var(--text); cursor:pointer; font-size:12px; font-weight:650;
+}
+.creator-avatar img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit;
+}
+.creator-avatar:hover { border-color:var(--accent); }
+.creator-avatar:focus-visible { outline-offset:1px; }
+.creator-avatar-dot {
+  position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border:2px solid var(--surface);
+  border-radius:50%; background:#858993;
+}
+[data-creator-status="live"] .creator-avatar-dot { background:#36c86c; }
 .stream-tool-list {
   list-style:none; display:grid; gap:3px; margin:8px 0; padding:0;
 }
@@ -29,8 +42,6 @@
 .stream-tool-list li strong { font-size:13px; }
 .stream-tool-list li span { color:var(--muted); font-size:12px; }
 .stream-tool-list li button { flex:none; }
-.creator-status-list { grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr)); max-height:218px; overflow:auto; scrollbar-width:thin; }
-.creator-status-list [data-creator-status="live"] span { color:var(--text); }
 .stream-tool-dialog {
   width:min(510px,calc(100% - 28px)); max-height:calc(100dvh - 24px); overflow:auto;
   padding:20px; color:var(--text);
@@ -50,5 +61,5 @@
 @media(max-width:600px) {
   .stream-tool-dialog { padding:14px; }
   .stream-hide-trigger { width:34px; height:32px; }
-  .creator-status-list { max-height:182px; }
+  .creator-avatar { width:34px; height:34px; }
 }

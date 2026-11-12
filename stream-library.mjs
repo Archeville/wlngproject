@@ -7,6 +7,16 @@ const validChannelId = id => typeof id === 'string' && /^[\w-]{1,128}$/.test(id)
 const shortText = (value, size) => typeof value === 'string' ? value.trim().slice(0, size) : '';
 export const channelName = channel => shortText(channel?.english_name, 128) || shortText(channel?.name, 128);
 
+export function safeChannelPhoto(value) {
+  if (typeof value !== 'string' || value.length > 1024) return '';
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' && !url.username && !url.password &&
+        (url.hostname.endsWith('.googleusercontent.com') || url.hostname.endsWith('.ggpht.com'))) return url.href;
+  } catch { /* the feed may omit an avatar */ }
+  return '';
+}
+
 export function streamStatus(stream, now = Date.now()) {
   const scheduled = Date.parse(stream.start_scheduled);
   if (stream.status === 'live' && !stream.start_actual && Number.isFinite(scheduled) && scheduled > now) return 'upcoming';
@@ -84,17 +94,31 @@ export const streamLibrary = {
   remember(streams) {
     const latest = new Map();
     for (const stream of streams) {
-      const id = stream.channel?.id, name = channelName(stream.channel);
-      if (validChannelId(id) && name) latest.set(id, { id, name });
+      const id = stream.channel?.id;
+      if (!validChannelId(id)) continue;
+      const previous = latest.get(id);
+      const name = channelName(stream.channel) || previous?.name || '';
+      const photo = safeChannelPhoto(stream.channel?.photo) || previous?.photo || '';
+      if (name || photo) latest.set(id, { id, name, photo });
     }
     if (!latest.size) return;
     change(current => {
-      const old = new Map(current.creators.map(item => [item.id, item.name]));
-      if ([...latest.values()].every(item => old.get(item.id) === item.name)) return null;
-      return { ...current, creators: [...latest.values(), ...current.creators.filter(item => !latest.has(item.id))].slice(0, creatorLimit) };
+      const old = new Map(current.creators.map(item => [item.id, item]));
+      const merged = [...latest.values()].map(item => ({
+        id: item.id, name: item.name || shortText(old.get(item.id)?.name, 128),
+        photo: item.photo || safeChannelPhoto(old.get(item.id)?.photo)
+      }));
+      if (merged.every(item => {
+        const previous = old.get(item.id);
+        return previous?.name === item.name && (previous.photo || '') === item.photo;
+      })) return null;
+      return { ...current, creators: [...merged, ...current.creators.filter(item => !latest.has(item.id))].slice(0, creatorLimit) };
     }, false);
   },
-  creator(id) { return shortText(data.creators.find(item => item.id === id)?.name, 128); },
+  creator(id) {
+    const item = data.creators.find(item => item.id === id);
+    return { name: shortText(item?.name, 128), photo: safeChannelPhoto(item?.photo) };
+  },
   record(stream) {
     if (!validVideoId(stream?.id)) return false;
     const entry = streamEntry(stream);

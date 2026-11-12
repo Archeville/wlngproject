@@ -8,6 +8,8 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
   const editForm = $('favorite-edit-form');
   const newName = $('favorite-new-name');
   const viewStatus = $('favorite-view-status');
+  const tabSelect = $('favorite-tab-select');
+  const typeSelect = $('favorite-edit-type');
   let local;
   try { local = defaultFavorites(JSON.parse(localStorage.getItem('wlng-favorites') || '[]')); }
   catch { local = defaultFavorites(); }
@@ -22,8 +24,14 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
     container.replaceChildren(...tabs.map(tab => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'watch-button';
-      button.textContent = tab.name;
+      button.className = 'favorite-rail-tab';
+      const mark = document.createElement('span');
+      mark.className = 'favorite-tab-mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = tab.type === 'rules' ? '≡' : '♡';
+      const label = document.createElement('span');
+      label.textContent = tab.name;
+      button.append(mark, label);
       button.setAttribute('aria-pressed', String(tab.id === activeId));
       button.addEventListener('click', () => {
         activeId = tab.id;
@@ -32,8 +40,9 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
       });
       return button;
     }));
-    $('favorite-new-rules').disabled = !canAdd();
-    $('favorite-new-channels').disabled = !canAdd();
+    tabSelect.replaceChildren(...tabs.map(tab => new Option(tab.name, tab.id)));
+    tabSelect.value = activeId;
+    $('favorite-new').disabled = !canAdd();
     $('favorite-edit').hidden = activeId === 'favorites';
     $('favorite-edit').disabled = !owner || !loaded || busy;
     if (!owner) viewStatus.textContent = 'Sign in to create tabs and sync Favorites across devices.';
@@ -44,6 +53,10 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
     view();
     onChange();
   }
+  tabSelect.addEventListener('change', () => {
+    activeId = tabSelect.value;
+    refresh();
+  });
   async function request(input) {
     const own = generation;
     const token = await window.WLNG_AUTH?.getAccessToken();
@@ -189,7 +202,9 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
     editing = tab?.id ?? null;
     editType = type;
     confirmDelete = false;
-    $('favorite-editor-title').textContent = tab ? 'Edit favorite tab' : type === 'rules' ? 'New rules tab' : 'New channel tab';
+    $('favorite-editor-title').textContent = tab ? 'Edit favorite tab' : 'New favorite tab';
+    $('favorite-type-field').hidden = Boolean(tab);
+    typeSelect.value = type;
     $('favorite-edit-name').value = tab?.name || '';
     $('favorite-rules').hidden = type !== 'rules';
     $('favorite-rule-title').value = tab?.rules?.title ?? '';
@@ -200,8 +215,11 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
     $('favorite-editor-status').textContent = '';
     openDialog(editor);
   }
-  $('favorite-new-rules').addEventListener('click', () => openEditor('rules'));
-  $('favorite-new-channels').addEventListener('click', () => openEditor('channels'));
+  typeSelect.addEventListener('change', () => {
+    editType = typeSelect.value;
+    $('favorite-rules').hidden = editType !== 'rules';
+  });
+  $('favorite-new').addEventListener('click', () => openEditor('channels'));
   $('favorite-edit').addEventListener('click', () => {
     const tab = activeTab();
     if (tab.id !== 'favorites') openEditor(tab.type, tab);

@@ -1,5 +1,5 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
-import { setupFavorites } from './favorites.js?v=20261112-favorites1';
+import { setupFavorites } from './favorites.js?v=20261112-favoritesrail1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
@@ -313,7 +313,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favorites1';
   function updateAgencyNavigation(){
     $('#hub-agency').textContent=state.favoritesOnly?'Saved streams':state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org;
     for(const link of document.querySelectorAll('.agency-link')){
-      if(link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
+      if(!state.favoritesOnly&&link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
       const name=link.dataset.org==='all'?'All':link.dataset.org==='Independents'?'Indie':link.dataset.org;
       const live=state.streams.filter(x=>streamStatus(x)==='live'&&(link.dataset.org==='all'||x.channel?.org===link.dataset.org));
       const count=new Set(live.map(x=>x.channel?.id||x.id)).size;

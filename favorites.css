@@ -1,13 +1,41 @@
 #hub-title { color:inherit; }
-.favorite-panel {
-  display:grid; gap:12px; padding:12px 0 16px;
-  border-bottom:1px solid var(--border);
+.hub-browse { min-width:0; }
+.hub-browse:has(.favorite-panel:not([hidden])) {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(154px,190px);
+  grid-template-areas:"streams tabs";
+  align-items:start;
+  gap:20px;
 }
-.favorite-panel[hidden],.favorite-dialog fieldset[hidden] { display:none; }
-.favorite-tabs,.favorite-actions { display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
-.favorite-tabs button { max-width:100%; overflow-wrap:anywhere; }
-.favorite-tabs [aria-pressed="true"] { border-color:var(--accent); color:var(--accent-strong); background:var(--raised); }
-.favorite-panel .watch-note { margin:0; }
+.hub-streams { grid-area:streams; min-width:0; }
+.favorite-panel {
+  grid-area:tabs;
+  position:sticky;
+  top:calc(var(--header,76px) + 14px);
+  display:grid; gap:8px; padding:9px;
+  background:var(--surface);
+  border:1px solid var(--border); border-radius:9px;
+}
+.favorite-panel[hidden],.favorite-dialog fieldset[hidden],#favorite-edit[hidden],#favorite-type-field[hidden] { display:none; }
+.favorite-rail-heading,.favorite-rail-actions { display:flex; align-items:center; gap:4px; }
+.favorite-rail-heading { justify-content:space-between; padding:0 2px 3px 5px; border-bottom:1px solid var(--border); }
+.favorite-rail-heading h2 { margin:0; color:var(--muted); font-size:12px; font-weight:650; }
+.favorite-rail-actions .icon-button { width:28px; height:28px; color:var(--text); }
+.favorite-rail-actions .icon-button svg { width:15px; height:15px; }
+.favorite-rail-actions .icon-button:disabled { opacity:.45; cursor:default; }
+.favorite-tabs { display:grid; gap:2px; }
+.favorite-rail-tab {
+  display:flex; align-items:center; gap:8px; width:100%; min-height:34px; padding:6px 7px;
+  border:1px solid transparent; border-radius:5px; background:transparent;
+  color:var(--text); text-align:left; font-size:13px; overflow-wrap:anywhere;
+}
+.favorite-tab-mark { flex:0 0 16px; text-align:center; color:var(--muted); font-size:15px; }
+.favorite-rail-tab:hover { background:var(--raised); }
+.favorite-rail-tab[aria-pressed="true"] { border-color:var(--border); border-inline-start-color:var(--accent); background:var(--raised); }
+.favorite-rail-tab[aria-pressed="true"] .favorite-tab-mark { color:var(--accent-strong); }
+.favorite-panel .watch-note { margin:0; padding:0 5px 2px; font-size:11px; }
+.favorite-actions { display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
+#favorite-tab-select { display:none; }
 .favorite-dialog {
   width:min(480px,calc(100% - 32px)); max-height:calc(100dvh - 28px);
   overflow:auto; padding:20px; color:var(--text);
@@ -17,6 +45,7 @@
 .favorite-dialog fieldset { margin:5px 0; padding:10px; border:1px solid var(--border); border-radius:8px; min-width:0; }
 .favorite-dialog legend { padding:0 5px; font-weight:600; }
 .favorite-dialog label,.favorite-dialog summary { font-size:13px; }
+#favorite-type-field { display:grid; gap:8px; }
 .favorite-dialog :is(input:not([type="checkbox"]),select) {
   min-width:0; width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;
   background:var(--raised); color:var(--text); font:inherit;
@@ -32,7 +61,18 @@
 .favorite-dialog [role="status"]:empty { display:none; }
 .favorite-dialog .favorite-actions { justify-content:flex-end; }
 #favorite-delete { color:var(--danger,#e97c85); }
+@media(max-width:880px) {
+  .hub-browse:has(.favorite-panel:not([hidden])) { grid-template-columns:minmax(0,1fr); grid-template-areas:"tabs" "streams"; gap:10px; }
+  .favorite-panel { position:static; grid-template-columns:minmax(0,1fr) auto; gap:5px 8px; align-items:center; padding:7px; }
+  .favorite-rail-heading { grid-column:2; grid-row:1; padding:0; border:0; }
+  .favorite-rail-heading h2,.favorite-tabs { display:none; }
+  .favorite-panel .watch-note { grid-column:1/-1; padding:0 0 1px 2px; }
+  #favorite-tab-select {
+    display:block; grid-column:1; grid-row:1; width:100%; min-width:0; min-height:34px; padding:5px 7px;
+    border:1px solid var(--border); border-radius:5px; background:var(--raised); color:var(--text);
+  }
+}
 @media(max-width:600px) {
-  .favorite-tabs .watch-button,.favorite-actions .watch-button { min-height:40px; }
+  .favorite-actions .watch-button { min-height:40px; }
   .favorite-dialog { padding:15px; }
 }

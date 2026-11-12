@@ -1,16 +1,19 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
+import { setupFavorites } from './favorites.js?v=20261112-favorites1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
   const pref = (key, value) => { try { if (value !== undefined) localStorage.setItem(key, value); return localStorage.getItem(key); } catch { return null; } };
   const validOrgs = ['Hololive', 'Nijisanji', 'Independents', 'all'];
   state.org = validOrgs.includes(pref('wlng-default-org')) ? pref('wlng-default-org') : 'Hololive';
-  let favorites; try { favorites = JSON.parse(pref('wlng-favorites') || '[]'); if (!Array.isArray(favorites)) favorites = []; } catch { favorites = []; }
   const creatorId = item => typeof item.channel?.id === 'string' ? item.channel.id : '';
-  const isFavorite = item => favorites.includes(creatorId(item));
   const streamStatus = item => { const scheduled = Date.parse(item.start_scheduled); return item.status === 'live' && !item.start_actual && Number.isFinite(scheduled) && scheduled > Date.now() ? 'upcoming' : item.status; };
-  function toggleFavorite(item) { const id = creatorId(item); if (!id) return; favorites = isFavorite(item) ? favorites.filter(x => x !== id) : [...favorites, id]; pref('wlng-favorites', JSON.stringify(favorites)); render(); updatePlayerFavorite(); }
-  function updatePlayerFavorite() { const item = state.streams.find(x => x.id === state.playerId); const button = $('#player-favorite'); button.disabled = !item || !creatorId(item); button.textContent = item && isFavorite(item) ? '♥ Favorited' : '♡ Favorite creator'; }
+  function updatePlayerFavorite() {
+    const item = state.streams.find(x => x.id === state.playerId);
+    const button = $('#player-favorite');
+    button.disabled = !item || !creatorId(item);
+    button.textContent = item && favorites.contains(creatorId(item)) ? '♥ Favorited' : '♡ Favorite creator';
+  }
   const reducedMotion = () => document.body.classList.contains('reduce-motion') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const animate = (element, frames, options = {}) => {
     if (reducedMotion() || !element.animate) return null;
@@ -45,7 +48,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const time = (value) => { const d = new Date(value); return Number.isNaN(d.valueOf()) ? 'Time to be announced' : new Intl.DateTimeFormat(undefined, { weekday:'short', hour:'numeric', minute:'2-digit', month:'short', day:'numeric' }).format(d); };
   const message = (html) => { $('#status').innerHTML = html; $('#status').hidden = false; };
-  function extraFilters(){return ['all','Independents'].includes(state.org);}
+  function extraFilters(){return !state.favoritesOnly && ['all','Independents'].includes(state.org);}
   function updateFilters(){$('#stream-filters').hidden=!extraFilters();}
   updateFilters();
   for(const id of ['filter-name','filter-viewers'])$('#'+id).addEventListener('input',()=>{if(state.updated)render();});
@@ -54,10 +57,10 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     updateAgencyNavigation();
     const query = $('#search').value.trim().toLocaleLowerCase();
     const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
-    const items = state.streams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && (!state.favoritesOnly || isFavorite(x)) && (state.org === 'all' || x.channel?.org === state.org) && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
-    const agencyStreams=state.streams.filter(x=>state.org==='all'||x.channel?.org===state.org);
-    $('#live-count').textContent = agencyStreams.filter(x => streamStatus(x) === 'live').length;
-    $('#upcoming-count').textContent = agencyStreams.filter(x => streamStatus(x) === 'upcoming').length;
+    const viewStreams = state.streams.filter(x => state.favoritesOnly ? favorites.matches(x) : state.org === 'all' || x.channel?.org === state.org);
+    const items = viewStreams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
+    $('#live-count').textContent = viewStreams.filter(x => streamStatus(x) === 'live').length;
+    $('#upcoming-count').textContent = viewStreams.filter(x => streamStatus(x) === 'upcoming').length;
     $('#list-label').textContent = state.tab === 'live' ? 'LIVE RIGHT NOW' : 'COMING UP';
     $('#result-label').innerHTML = `${items.length} STREAM${items.length === 1 ? '' : 'S'} <b>✧</b>`;
     $('#grid').innerHTML = items.map(x => {
@@ -66,7 +69,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
       const viewers = Number.isFinite(x.live_viewers) ? `${new Intl.NumberFormat().format(x.live_viewers)} watching` : '';
       return `<article class="card" tabindex="0" role="button" data-id="${esc(x.id)}" aria-label="Watch ${esc(x.title)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div></article>`;
     }).join('');
-    if (!items.length) message(state.favoritesOnly ? '<strong>No favorite creators in this view.</strong><br>Open a stream and choose Favorite creator. Try All agencies or the other stream tab.' : query ? '<strong>No matches found.</strong><br>Try a different search.' : '<strong>Nothing here just yet.</strong><br>Check back soon or explore the other tab.'); else $('#status').hidden = true;
+    if (!items.length) message(state.favoritesOnly ? '<strong>No streams match this tab right now.</strong><br>Try the other stream status or choose another tab.' : query ? '<strong>No matches found.</strong><br>Try a different search.' : '<strong>Nothing here just yet.</strong><br>Check back soon or explore the other tab.'); else $('#status').hidden = true;
     animateResults();
   }
   async function load() {
@@ -308,7 +311,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   updateTabIndicator();
   $('#search').addEventListener('input', () => { if (state.updated) render(); });
   function updateAgencyNavigation(){
-    $('#hub-agency').textContent=state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org;
+    $('#hub-agency').textContent=state.favoritesOnly?'Saved streams':state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org;
     for(const link of document.querySelectorAll('.agency-link')){
       if(link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
       const name=link.dataset.org==='all'?'All':link.dataset.org==='Independents'?'Indie':link.dataset.org;
@@ -320,14 +323,31 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     $('#hub-toggle').title='Stream hub · '+(state.org==='all'?'All agencies':state.org==='Independents'?'Indie':state.org);
   }
   updateAgencyNavigation();
-  $('#hub-toggle').addEventListener('click',()=>{const expanded=$('#hub-toggle').getAttribute('aria-expanded')!=='true';$('#hub-toggle').setAttribute('aria-expanded',String(expanded));$('#agency-nav').hidden=!expanded;});
+  function setFavoritesMode(enabled) {
+    state.favoritesOnly = enabled;
+    $('#favorites-panel').hidden = !enabled;
+    $('#hub-title').textContent = enabled ? 'Favorites' : 'Stream hub';
+    $('#favorites-open').classList.toggle('selected', enabled);
+    $('#favorites-open').setAttribute('aria-pressed', String(enabled));
+    $('#hub-toggle').classList.toggle('selected', !enabled);
+    updateFilters();
+    updateAgencyNavigation();
+  }
+  $('#hub-toggle').addEventListener('click',()=>{
+    const returning = state.favoritesOnly || !$('#multiview').hidden;
+    const expanded = returning || $('#hub-toggle').getAttribute('aria-expanded') !== 'true';
+    $('#hub-toggle').setAttribute('aria-expanded', String(expanded));
+    $('#agency-nav').hidden = !expanded;
+    if (returning) { setFavoritesMode(false); if (state.updated) render(); }
+  });
   $('#default-org').value = state.org;
   $('#default-org').addEventListener('change', e => pref('wlng-default-org', e.target.value));
-  $('#favorites-open').addEventListener('click', e => { state.favoritesOnly = !state.favoritesOnly; e.currentTarget.classList.toggle('selected', state.favoritesOnly); e.currentTarget.setAttribute('aria-pressed', String(state.favoritesOnly)); if (state.updated) render(); closeMobileNavigation(); });
-  $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) toggleFavorite(item); });
+  $('#favorites-open').addEventListener('click', () => { setFavoritesMode(true); favorites.open(); closeMobileNavigation(); });
+  $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) void favorites.openPicker(item); });
   document.querySelectorAll('.agency-link').forEach(link=>link.addEventListener('click',()=>{
     closeMobileNavigation();
-    if(state.org===link.dataset.org)return;
+    if(state.org===link.dataset.org&&!state.favoritesOnly)return;
+    setFavoritesMode(false);
     state.org=link.dataset.org;updateFilters();updateAgencyNavigation();
     if(state.updated)render();
   }));
@@ -353,7 +373,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
     else $('.header-right').insertBefore(auth,$('#settings-open'));
   };
   $('#menu-toggle').addEventListener('click', () => { document.body.classList.toggle('nav-collapsed'); updateNavigation(); if(mobile.matches&&document.body.classList.contains('nav-collapsed'))$('#hub-toggle').focus(); });
-  $('#multiview-open').addEventListener('click',()=>closeMobileNavigation());
+  $('#multiview-open').addEventListener('click',()=>{if(state.favoritesOnly){setFavoritesMode(false);if(state.updated)render();}closeMobileNavigation();});
   $('#nav-shade').addEventListener('click',()=>closeMobileNavigation(true));
   $('#search').addEventListener('focus',()=>closeMobileNavigation());
   document.addEventListener('keydown',event=>{
@@ -442,6 +462,10 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
   $('#density-toggle').addEventListener('click', () => setDensity(document.body.classList.contains('compact') ? 'comfortable' : 'compact'));
   let lastFeedRequest=0,feedPending=false;
   window.addEventListener('wlng-refresh-streams',()=>{if(feedPending||Date.now()-lastFeedRequest<30000){window.dispatchEvent(new Event('wlng-feed-refreshed'));return;}lastFeedRequest=Date.now();feedPending=true;load().finally(()=>{feedPending=false;window.dispatchEvent(new Event('wlng-feed-refreshed'));});});
+  const favorites = setupFavorites({ openDialog, closeDialog, onChange: () => {
+    updatePlayerFavorite();
+    if (state.favoritesOnly && state.updated) render();
+  } });
   lastFeedRequest=Date.now();
   const sharedId = new URLSearchParams(location.search).get('watch');
   void load().then(() => {

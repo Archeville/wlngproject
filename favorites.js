@@ -264,6 +264,8 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
   return {
     open() { refresh(); void load().catch(() => {}); },
     openPicker,
+    activeTab,
+    async getTabs() { await load(); return tabs; },
     matches: (stream, status) => matchesFavoriteTab(activeTab(), stream, status),
     contains: id => tabs.some(tab => tab.type === 'channels' && tab.channels.includes(id))
   };

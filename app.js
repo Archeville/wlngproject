@@ -1,15 +1,16 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
-import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
+import { setupFavorites } from './favorites.js?v=20261112-streamtools1';
+import { streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-streamtools1';
+import { setupStreamTools } from './stream-tools.js?v=20261112-streamtools1';
 (() => {
   const $ = (s) => document.querySelector(s);
-  const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
+  const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null, playerItem: null };
   const pref = (key, value) => { try { if (value !== undefined) localStorage.setItem(key, value); return localStorage.getItem(key); } catch { return null; } };
   const validOrgs = ['Hololive', 'Nijisanji', 'Independents', 'all'];
   state.org = validOrgs.includes(pref('wlng-default-org')) ? pref('wlng-default-org') : 'Hololive';
   const creatorId = item => typeof item.channel?.id === 'string' ? item.channel.id : '';
-  const streamStatus = item => { const scheduled = Date.parse(item.start_scheduled); return item.status === 'live' && !item.start_actual && Number.isFinite(scheduled) && scheduled > Date.now() ? 'upcoming' : item.status; };
   function updatePlayerFavorite() {
-    const item = state.streams.find(x => x.id === state.playerId);
+    const item = state.playerItem;
     const button = $('#player-favorite');
     button.disabled = !item || !creatorId(item);
     button.textContent = item && favorites.contains(creatorId(item)) ? '♥ Favorited' : '♡ Favorite creator';
@@ -55,9 +56,11 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
   $('#filters-clear').addEventListener('click',()=>{$('#filter-name').value='';$('#filter-viewers').value='0';if(state.updated)render();});
   function render() {
     updateAgencyNavigation();
+    if (state.favoritesOnly) streamTools.renderCreators(favorites.activeTab(), state.streams, Boolean(state.updated));
     const query = $('#search').value.trim().toLocaleLowerCase();
     const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
-    const viewStreams = state.streams.filter(x => state.favoritesOnly ? favorites.matches(x, streamStatus(x)) : state.org === 'all' || x.channel?.org === state.org);
+    const viewStreams = state.streams.filter(x => !streamLibrary.isHidden(x) &&
+      (state.favoritesOnly ? favorites.matches(x, streamStatus(x)) : state.org === 'all' || x.channel?.org === state.org));
     const items = viewStreams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
     $('#live-count').textContent = viewStreams.filter(x => streamStatus(x) === 'live').length;
     $('#upcoming-count').textContent = viewStreams.filter(x => streamStatus(x) === 'upcoming').length;
@@ -67,7 +70,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
       const name = x.channel?.english_name || x.channel?.name || 'Unknown channel';
       const photo = safeImage(x.channel?.photo); const label = streamStatus(x) === 'live' ? '● LIVE' : esc(time(x.start_scheduled || x.available_at));
       const viewers = Number.isFinite(x.live_viewers) ? `${new Intl.NumberFormat().format(x.live_viewers)} watching` : '';
-      return `<article class="card" tabindex="0" role="button" data-id="${esc(x.id)}" aria-label="Watch ${esc(x.title)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div></article>`;
+      return `<article class="card" data-id="${esc(x.id)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div><button class="stream-card-open" type="button" aria-label="Watch ${esc(x.title)}"></button><button class="stream-hide-trigger" type="button" aria-label="Hide options for ${esc(x.title)}" title="Hide options">⋯</button></article>`;
     }).join('');
     if (!items.length) message(state.favoritesOnly ? '<strong>No streams match this tab right now.</strong><br>Try the other stream status or choose another tab.' : query ? '<strong>No matches found.</strong><br>Try a different search.' : '<strong>Nothing here just yet.</strong><br>Check back soon or explore the other tab.'); else $('#status').hidden = true;
     animateResults();
@@ -80,15 +83,17 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
       if (!response.ok) throw new Error('Feed unavailable'); const data = await response.json();
       if (!Array.isArray(data.streams)) throw new Error('Invalid feed');
       state.streams = data.streams.filter(x => validId(x.id) && ['live','upcoming'].includes(x.status)); state.updated = data.updatedAt;
+      streamLibrary.remember(state.streams);
       window.WLNG_STREAMS=state.streams;window.dispatchEvent(new CustomEvent('wlng-streams',{detail:state.streams}));
       const stamp = data.updatedAt ? new Date(data.updatedAt) : null;
       $('#updated').textContent = stamp && !Number.isNaN(stamp.valueOf()) ? `${data.stale ? 'CACHED · ' : ''}UPDATED ${stamp.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` : 'STREAM FEED CONNECTED'; render();
     } catch { $('#updated').textContent = 'CONNECTION INTERRUPTED'; message('<strong>We couldn’t load the stream feed.</strong><br>Please try again in a little while.'); }
   }
-  function play(id, fromShare = false) {
+  function play(id, fallback = null) {
     if (!validId(id)) return;
-    const item = state.streams.find(x => x.id === id) ?? (fromShare ? { id, title: 'YouTube stream' } : null);
+    const item = state.streams.find(x => x.id === id) ?? fallback;
     if (!item) return;
+    streamLibrary.record(item);
     if (playerDialog.classList.contains('is-mini')) {
       if (state.playerId === id) { restoreMini(); return; }
       playerDialog.close();
@@ -97,6 +102,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
       miniAnimation?.cancel();
     }
     closePip(false);pipStatus('');
+    state.playerItem = item;
     $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); renderRelated(item); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     const viewers=$('#player-viewers');const hasViewers=streamStatus(item)==='live'&&Number.isFinite(item.live_viewers)&&item.live_viewers>=0;viewers.hidden=!hasViewers;viewers.textContent=hasViewers?new Intl.NumberFormat().format(item.live_viewers)+' watching':'';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || 'YouTube';
@@ -234,7 +240,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
   function renderRelated(item) {
     const label=item.channel?.org==='Independents'?'Indie':item.channel?.org;
     $('#related-heading').textContent=label?label+' · Other live streams':'Other live streams';
-    const matches=relatedLives(state.streams,item);
+    const matches=relatedLives(state.streams.filter(stream => !streamLibrary.isHidden(stream)),item);
     $('#related-lives-list').innerHTML=matches.map(x=>'<button type="button" class="related-live" data-related-id="'+esc(x.id)+'"><img loading="lazy" src="https://i.ytimg.com/vi/'+esc(x.id)+'/mqdefault.jpg" alt=""><span><strong>'+esc(x.channel?.english_name||x.channel?.name||'Unknown channel')+'</strong><span>'+esc(x.title)+'</span><small>● LIVE'+(Number.isFinite(x.live_viewers)?' · '+new Intl.NumberFormat().format(x.live_viewers)+' watching':'')+'</small></span></button>').join('');
     $('#related-lives-empty').hidden=matches.length>0;
   }
@@ -315,7 +321,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
     for(const link of document.querySelectorAll('.agency-link')){
       if(!state.favoritesOnly&&link.dataset.org===state.org)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
       const name=link.dataset.org==='all'?'All':link.dataset.org==='Independents'?'Indie':link.dataset.org;
-      const live=state.streams.filter(x=>streamStatus(x)==='live'&&(link.dataset.org==='all'||x.channel?.org===link.dataset.org));
+      const live=state.streams.filter(x=>!streamLibrary.isHidden(x)&&streamStatus(x)==='live'&&(link.dataset.org==='all'||x.channel?.org===link.dataset.org));
       const count=new Set(live.map(x=>x.channel?.id||x.id)).size;
       link.querySelector('.agency-live-count').textContent=state.updated?String(count):'—';
       link.setAttribute('aria-label',state.updated?name+', '+count+' live channel'+(count===1?'':'s'):name);
@@ -326,6 +332,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
   function setFavoritesMode(enabled) {
     state.favoritesOnly = enabled;
     $('#favorites-panel').hidden = !enabled;
+    if (!enabled) $('#favorite-creators').hidden = true;
     $('#hub-title').textContent = enabled ? 'Favorites' : 'Stream hub';
     $('#favorites-open').classList.toggle('selected', enabled);
     $('#favorites-open').setAttribute('aria-pressed', String(enabled));
@@ -343,7 +350,8 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
   $('#default-org').value = state.org;
   $('#default-org').addEventListener('change', e => pref('wlng-default-org', e.target.value));
   $('#favorites-open').addEventListener('click', () => { setFavoritesMode(true); favorites.open(); closeMobileNavigation(); });
-  $('#player-favorite').addEventListener('click', () => { const item = state.streams.find(x => x.id === state.playerId); if (item) void favorites.openPicker(item); });
+  $('#player-favorite').addEventListener('click', () => { if (state.playerItem) void favorites.openPicker(state.playerItem); });
+  $('#player-hide').addEventListener('click', () => streamTools.hidePicker(state.playerItem));
   document.querySelectorAll('.agency-link').forEach(link=>link.addEventListener('click',()=>{
     closeMobileNavigation();
     if(state.org===link.dataset.org&&!state.favoritesOnly)return;
@@ -351,8 +359,13 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
     state.org=link.dataset.org;updateFilters();updateAgencyNavigation();
     if(state.updated)render();
   }));
-  $('#grid').addEventListener('click', e => { const card = e.target.closest('[data-id]'); if (card) play(card.dataset.id); });
-  $('#grid').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-id]')) { e.preventDefault(); play(e.target.dataset.id); } });
+  $('#grid').addEventListener('click', event => {
+    const card = event.target.closest('[data-id]');
+    if (!card) return;
+    if (event.target.closest('.stream-hide-trigger')) {
+      streamTools.hidePicker(state.streams.find(item => item.id === card.dataset.id));
+    } else play(card.dataset.id);
+  });
   $('#skins-open').addEventListener('click',()=>openDialog($('#skins-dialog')));
   $('#settings-open').addEventListener('click', () => openDialog($('#settings-dialog')));
   $('#sidebar-settings').addEventListener('click', () => openDialog($('#settings-dialog')));
@@ -405,6 +418,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
     miniControls.hidden = true;
     miniDrag = null;
     state.playerId = null;
+    state.playerItem = null;
     $('#player-slot').replaceChildren();
     $('#chat-slot').replaceChildren();
     if (document.fullscreenElement && playerDialog.contains(document.fullscreenElement)) document.exitFullscreen().catch(() => {});
@@ -464,11 +478,19 @@ import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
   window.addEventListener('wlng-refresh-streams',()=>{if(feedPending||Date.now()-lastFeedRequest<30000){window.dispatchEvent(new Event('wlng-feed-refreshed'));return;}lastFeedRequest=Date.now();feedPending=true;load().finally(()=>{feedPending=false;window.dispatchEvent(new Event('wlng-feed-refreshed'));});});
   const favorites = setupFavorites({ openDialog, closeDialog, onChange: () => {
     updatePlayerFavorite();
-    if (state.favoritesOnly && state.updated) render();
+    if (state.favoritesOnly) {
+      if (state.updated) render();
+      else streamTools.renderCreators(favorites.activeTab(), state.streams, false);
+    }
   } });
+  const streamTools = setupStreamTools({ openDialog, closeDialog, play, time, onVisibilityChange: () => {
+    if (state.updated) render();
+    if (state.playerItem) renderRelated(state.playerItem);
+  } });
+  window.WLNG_FAVORITES = { getTabs: favorites.getTabs, activeTab: favorites.activeTab };
   lastFeedRequest=Date.now();
   const sharedId = new URLSearchParams(location.search).get('watch');
   void load().then(() => {
-    if (validId(sharedId) && !state.playerId) play(sharedId, true);
+    if (validId(sharedId) && !state.playerId) play(sharedId, { id:sharedId, title:'YouTube stream' });
   });
 })();

@@ -119,6 +119,9 @@ export const streamLibrary = {
     const item = data.creators.find(item => item.id === id);
     return { name: shortText(item?.name, 128), photo: safeChannelPhoto(item?.photo) };
   },
+  knownCreators() {
+    return data.creators.map(item => ({ id:item.id, name:shortText(item.name, 128) })).filter(item => item.name);
+  },
   record(stream) {
     if (!validVideoId(stream?.id)) return false;
     const entry = streamEntry(stream);

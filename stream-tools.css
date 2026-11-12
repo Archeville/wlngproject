@@ -58,6 +58,11 @@
 .stream-tool-confirm { margin-top:8px; padding:8px 10px; border:1px solid var(--border); border-radius:6px; }
 .stream-tool-confirm p { margin:0 0 8px; }
 #stream-hide-name { overflow-wrap:anywhere; }
+.stream-result-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:7px; }
+#surprise-open { padding:5px 9px; white-space:nowrap; }
+#surprise-image { width:100%; aspect-ratio:16/9; object-fit:cover; background:var(--raised); border-radius:8px; }
+#surprise-name { margin:8px 0 3px; font-size:17px; overflow-wrap:anywhere; }
+#surprise-channel { margin:0 0 10px; }
 @media(max-width:600px) {
   .stream-tool-dialog { padding:14px; }
   .stream-hide-trigger { width:34px; height:32px; }

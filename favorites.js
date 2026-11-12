@@ -1,4 +1,5 @@
-import { defaultFavorites, maxFavoriteTabs, maxFavoriteChannels, validFavoriteChannel, validFavoriteTabs, matchesFavoriteTab } from './favorites-model.mjs?v=20261112-favoriteviewers1';
+import { defaultFavorites, maxFavoriteTabs, maxFavoriteChannels, validFavoriteChannel, validFavoriteTabs, matchesFavoriteTab } from './favorites-model.mjs?v=20261112-discovery1';
+import { setupFavoriteManager } from './favorite-manager.js?v=20261112-discovery1';
 
 export function setupFavorites({ openDialog, closeDialog, onChange }) {
   const $ = id => document.getElementById(id);
@@ -16,7 +17,7 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
   let tabs = local, activeId = 'favorites', revision = 0;
   let owner = window.WLNG_AUTH_USER || null, generation = 0, loaded = false, pending, busy = false;
   let channel, editing, editType, confirmDelete = false;
-  const activeTab = () => tabs.find(tab => tab.id === activeId) ?? tabs[0];
+  const activeTab = () => tabs.find(tab => tab.id === activeId) ?? tabs.find(tab => tab.id === 'favorites');
   const canAdd = () => Boolean(owner && loaded && !busy && tabs.length < maxFavoriteTabs);
 
   function view() {
@@ -128,6 +129,7 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
     viewStatus.textContent = '';
     if (picker.open) closeDialog(picker);
     if (editor.open) closeDialog(editor);
+    if ($('favorite-manager').open) closeDialog($('favorite-manager'));
     refresh();
     if (!$('favorites-panel').hidden) void load().catch(() => {});
   });
@@ -189,7 +191,7 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
         if (!canAdd()) throw new Error('You can have up to 10 favorite tabs.');
         next.push({ id: crypto.randomUUID(), name: uniqueName(name), type: 'channels', channels: [id] });
       }
-      if (JSON.stringify(next) !== JSON.stringify(tabs) || owner && revision === 0 && next[0].channels.length) await save(next);
+      if (JSON.stringify(next) !== JSON.stringify(tabs) || owner && revision === 0 && next.find(tab => tab.id === 'favorites').channels.length) await save(next);
       closeDialog(picker);
     } catch (error) {
       status.textContent = error.message;
@@ -259,6 +261,11 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
     }
     try { await save(tabs.filter(tab => tab.id !== editing)); closeDialog(editor); }
     catch (error) { $('favorite-editor-status').textContent = error.message; }
+  });
+  setupFavoriteManager({
+    openDialog, closeDialog, save, activeTab,
+    async getTabs() { await load(); return tabs; },
+    canReorder: () => Boolean(owner && loaded)
   });
   view();
   return {

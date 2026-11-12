@@ -13,8 +13,9 @@ function validText(value, limit) {
 }
 
 export function validFavoriteTabs(tabs) {
-  if (!Array.isArray(tabs) || tabs.length < 1 || tabs.length > maxFavoriteTabs ||
-      tabs[0]?.id !== 'favorites' || tabs[0].type !== 'channels' || tabs[0].name !== 'Favorites') return false;
+  if (!Array.isArray(tabs) || tabs.length < 1 || tabs.length > maxFavoriteTabs) return false;
+  const defaultTab = tabs.find(tab => tab?.id === 'favorites');
+  if (defaultTab?.type !== 'channels' || defaultTab.name !== 'Favorites') return false;
   const ids = new Set(), names = new Set();
   return tabs.every(tab => {
     if (!tab || typeof tab !== 'object' || Array.isArray(tab) ||
@@ -37,6 +38,17 @@ export function validFavoriteTabs(tabs) {
       return false;
     });
   });
+}
+
+export function youtubeChannelId(value) {
+  const text = value.trim();
+  if (/^UC[A-Za-z0-9_-]{22}$/.test(text)) return text;
+  try {
+    const url = new URL(/^https?:\/\//i.test(text) ? text : 'https://' + text);
+    if (!['https:', 'http:'].includes(url.protocol) ||
+        !['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(url.hostname)) return '';
+    return /^\/channel\/(UC[A-Za-z0-9_-]{22})(?:\/|$)/.exec(url.pathname)?.[1] || '';
+  } catch { return ''; }
 }
 
 export function matchesFavoriteTab(tab, stream, status = stream.status) {

@@ -1,7 +1,7 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
-import { setupFavorites } from './favorites.js?v=20261112-streamtools1';
-import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-avatars1';
-import { setupStreamTools } from './stream-tools.js?v=20261112-avatars1';
+import { setupFavorites } from './favorites.js?v=20261112-discovery1';
+import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-discovery1';
+import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null, playerItem: null };
@@ -53,13 +53,16 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-avatars1';
   updateFilters();
   for(const id of ['filter-name','filter-viewers'])$('#'+id).addEventListener('input',()=>{if(state.updated)render();});
   $('#filters-clear').addEventListener('click',()=>{$('#filter-name').value='';$('#filter-viewers').value='0';if(state.updated)render();});
+  function scopedStreams() {
+    return state.streams.filter(stream => !streamLibrary.isHidden(stream) &&
+      (state.favoritesOnly ? favorites.matches(stream, streamStatus(stream)) : state.org === 'all' || stream.channel?.org === state.org));
+  }
   function render() {
     updateAgencyNavigation();
     if (state.favoritesOnly) streamTools.renderCreators(favorites.activeTab(), state.streams, Boolean(state.updated));
     const query = $('#search').value.trim().toLocaleLowerCase();
     const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
-    const viewStreams = state.streams.filter(x => !streamLibrary.isHidden(x) &&
-      (state.favoritesOnly ? favorites.matches(x, streamStatus(x)) : state.org === 'all' || x.channel?.org === state.org));
+    const viewStreams = scopedStreams();
     const items = viewStreams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
     $('#live-count').textContent = viewStreams.filter(x => streamStatus(x) === 'live').length;
     $('#upcoming-count').textContent = viewStreams.filter(x => streamStatus(x) === 'upcoming').length;
@@ -482,7 +485,12 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-avatars1';
       else streamTools.renderCreators(favorites.activeTab(), state.streams, false);
     }
   } });
-  const streamTools = setupStreamTools({ openDialog, closeDialog, play, time, onVisibilityChange: () => {
+  const streamTools = setupStreamTools({ openDialog, closeDialog, play, time, liveCandidates: async () => {
+    if (state.favoritesOnly) await favorites.getTabs();
+    const unique = new Map();
+    for (const stream of scopedStreams()) if (streamStatus(stream) === 'live') unique.set(stream.id, stream);
+    return [...unique.values()];
+  }, onVisibilityChange: () => {
     if (state.updated) render();
     if (state.playerItem) renderRelated(state.playerItem);
   } });

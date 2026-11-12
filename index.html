@@ -5,8 +5,8 @@
 <meta name="description" content="come and see by yourself"><meta property="og:description" content="come and see by yourself"><meta property="og:title" content="WLNG"><link rel="icon" href="/favicon.ico?v=20261106"><meta name="referrer" content="strict-origin-when-cross-origin">
 <title>WLNG — Stream hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261105-pipfix1"><link rel="stylesheet" href="themes.css?v=20261107-agencynav2"><link rel="stylesheet" href="watch.css?v=20261112-miniwatch1"><link rel="stylesheet" href="mobile.css?v=20261108-discord1"><script defer src="config.js?v=20261109-api1"></script><script type="module" src="app.js?v=20261112-avatars1"></script><script defer src="search-motion.js?v=20261105-pipfix1"></script><script type="module" src="auth.js?v=20261108-sectiontabs1"></script><script type="module" src="xp.js?v=20261109-refill2"></script><script type="module" src="account.js?v=20261105-pipfix1"></script>
-<script type="module" src="skins.js?v=20261112-layout1"></script><link rel="stylesheet" href="multiview.css?v=20261109-expand4"><script type="module" src="multiview.js?v=20261112-avatars1"></script><link rel="stylesheet" href="profile-editor.css?v=20261112-fit2"><script type="module" src="profile-editor.js?v=20261112-fit2"></script><link rel="stylesheet" href="mini-player.css?v=20261112-miniwatch1"><link rel="stylesheet" href="favorites.css?v=20261112-favoritesrail1"><link rel="stylesheet" href="stream-tools.css?v=20261112-avatars1"></head>
+<link rel="stylesheet" href="styles.css?v=20261105-pipfix1"><link rel="stylesheet" href="themes.css?v=20261107-agencynav2"><link rel="stylesheet" href="watch.css?v=20261112-miniwatch1"><link rel="stylesheet" href="mobile.css?v=20261108-discord1"><script defer src="config.js?v=20261109-api1"></script><script type="module" src="app.js?v=20261112-discovery1"></script><script defer src="search-motion.js?v=20261105-pipfix1"></script><script type="module" src="auth.js?v=20261108-sectiontabs1"></script><script type="module" src="xp.js?v=20261109-refill2"></script><script type="module" src="account.js?v=20261105-pipfix1"></script>
+<script type="module" src="skins.js?v=20261112-layout1"></script><link rel="stylesheet" href="multiview.css?v=20261112-discovery1"><script type="module" src="multiview.js?v=20261112-discovery1"></script><link rel="stylesheet" href="profile-editor.css?v=20261112-fit2"><script type="module" src="profile-editor.js?v=20261112-fit2"></script><link rel="stylesheet" href="mini-player.css?v=20261112-miniwatch1"><link rel="stylesheet" href="favorites.css?v=20261112-discovery1"><link rel="stylesheet" href="stream-tools.css?v=20261112-discovery1"></head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
 <!-- Lucide icons: official lucide-icons/lucide sources; license: assets/icons/LICENSE -->
@@ -64,7 +64,7 @@
     <h2>My tabs</h2>
     <div class="favorite-rail-actions">
       <button id="favorite-new" class="icon-button" type="button" aria-label="New favorite tab" title="New tab"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      <button id="favorite-edit" class="icon-button" type="button" aria-label="Edit selected tab" title="Edit tab" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14 6 4 4M5 19l4-.9L20 7a1.4 1.4 0 0 0 0-2l-1-1a1.4 1.4 0 0 0-2 0L6 15z"/></svg></button>
+      <button id="favorite-manage" class="icon-button" type="button" aria-label="Manage favorites" title="Manage favorites"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14M8 4v4m8 2v4m-5 2v4"/></svg></button><button id="favorite-edit" class="icon-button" type="button" aria-label="Edit selected tab" title="Edit tab" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14 6 4 4M5 19l4-.9L20 7a1.4 1.4 0 0 0 0-2l-1-1a1.4 1.4 0 0 0-2 0L6 15z"/></svg></button>
     </div>
   </div>
   <div id="favorite-tabs" class="favorite-tabs" role="group" aria-label="Favorite tabs"></div>
@@ -75,16 +75,22 @@
 <div id="favorite-creators" hidden>
   <ul id="favorite-creator-list" class="creator-avatar-list" aria-label="Favorite creators, live first"></ul>
 </div><p id="stream-tool-notice" class="watch-note" role="status"></p>
-<div class="list-meta"><span id="list-label">LIVE RIGHT NOW</span><span id="result-label">ALL STREAMS</span></div>
+<div class="list-meta"><span id="list-label">LIVE RIGHT NOW</span><div class="stream-result-actions"><span id="result-label">ALL STREAMS</span><button class="watch-button" id="surprise-open" type="button">Surprise Me</button></div></div>
 <div id="status" class="state" role="status">Loading streams…</div><div id="grid" class="grid" aria-live="polite"></div></div></div>
 
-</section><section id="multiview" class="mv-panel" aria-labelledby="mv-heading" hidden><div class="mv-heading"><div><h1 id="mv-heading">Multiview<span>.</span></h1><p>Arrange streams and chats on a snapping grid. Layouts stay in this browser.</p></div><button id="mv-refresh" class="watch-button" type="button">Refresh live channels</button></div><div class="mv-controls"><button id="mv-add" class="watch-button" type="button">Add stream</button><button id="mv-from-favorites" class="watch-button" type="button">Add from Favorites</button><button id="mv-expand" class="watch-button" type="button" aria-pressed="false">Expand grid</button><output id="mv-zoom-label" class="mv-zoom-readout" aria-label="Grid zoom">75%</output></div><details class="mv-saves"><summary>Saved layouts · max 10</summary><div class="mv-controls"><label>Layout name<input id="mv-name" maxlength="40" placeholder="My viewing setup"></label><button id="mv-save-new" class="watch-button" type="button">Save new</button><label>Saved layout<select id="mv-saved"><option value="">Choose a layout</option></select></label><button id="mv-load" class="watch-button" type="button">Load</button><button id="mv-update" class="watch-button" type="button">Update saved</button><button id="mv-delete" class="watch-button" type="button">Delete saved</button></div></details><p class="watch-note">Drag a tile by its title. Drag its bottom-right corner to resize. Arrow keys on either handle also work. Use Chat to add a separate chat tile. Grab empty grid space to pan. Scroll to zoom; + / − keys also work. Max 12 streams.</p><p id="mv-status" class="watch-note" role="status"></p><div id="mv-viewport" class="mv-viewport" tabindex="0" aria-label="Multiview grid, drag empty space to pan"><div id="mv-sizer"><div id="mv-canvas" class="mv-canvas"></div></div></div></section></main>
+</section><section id="multiview" class="mv-panel" aria-labelledby="mv-heading" hidden><div class="mv-heading"><div><h1 id="mv-heading">Multiview<span>.</span></h1><p>Arrange streams and chats on a snapping grid. Layouts stay in this browser.</p></div><button id="mv-refresh" class="watch-button" type="button">Refresh live channels</button></div><div class="mv-controls"><button id="mv-add" class="watch-button" type="button">Add stream</button><button id="mv-from-favorites" class="watch-button" type="button">Add from Favorites</button><button id="mv-clear-audio" class="watch-button" type="button" hidden>Clear audio focus</button><button id="mv-expand" class="watch-button" type="button" aria-pressed="false">Expand grid</button><output id="mv-zoom-label" class="mv-zoom-readout" aria-label="Grid zoom">75%</output></div><details class="mv-saves"><summary>Saved layouts · max 10</summary><div class="mv-controls"><label>Layout name<input id="mv-name" maxlength="40" placeholder="My viewing setup"></label><button id="mv-save-new" class="watch-button" type="button">Save new</button><label>Saved layout<select id="mv-saved"><option value="">Choose a layout</option></select></label><button id="mv-load" class="watch-button" type="button">Load</button><button id="mv-update" class="watch-button" type="button">Update saved</button><button id="mv-delete" class="watch-button" type="button">Delete saved</button></div></details><p class="watch-note">Drag a tile by its title. Drag its bottom-right corner to resize. Arrow keys on either handle also work. Use Chat to add a separate chat tile. Grab empty grid space to pan. Scroll to zoom; + / − keys also work. Max 12 streams.</p><p id="mv-audio-status" class="watch-note" role="status"></p><p id="mv-status" class="watch-note" role="status"></p><div id="mv-viewport" class="mv-viewport" tabindex="0" aria-label="Multiview grid, drag empty space to pan"><div id="mv-sizer"><div id="mv-canvas" class="mv-canvas"></div></div></div></section></main>
 <dialog id="mv-favorites-dialog" class="modal stream-tool-dialog" aria-labelledby="mv-favorites-heading">
   <div class="modal-top"><h2 id="mv-favorites-heading">Add from Favorites</h2><button type="button" class="icon-button close" data-close="mv-favorites-dialog" aria-label="Close Favorites import"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
   <label for="mv-favorites-tab">Favorite tab</label>
   <select id="mv-favorites-tab"></select>
   <p id="mv-favorites-status" class="watch-note" role="status"></p>
   <button id="mv-favorites-add" class="watch-button selected" type="button" disabled>Add live creators</button>
+</dialog>
+<dialog id="surprise-dialog" class="modal stream-tool-dialog" aria-labelledby="surprise-heading">
+  <div class="modal-top"><h2 id="surprise-heading">Surprise Me</h2><button type="button" class="icon-button close" data-close="surprise-dialog" aria-label="Close Surprise Me"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div id="surprise-preview" hidden><img id="surprise-image" alt=""><h3 id="surprise-name"></h3><p id="surprise-channel" class="watch-note"></p></div>
+  <p id="surprise-status" class="watch-note" role="status"></p>
+  <div class="stream-tool-actions"><button id="surprise-watch" class="watch-button selected" type="button" disabled>Watch stream</button><button id="surprise-again" class="watch-button" type="button" disabled>Try another</button></div>
 </dialog>
 <dialog id="stream-history" class="modal stream-tool-dialog" aria-labelledby="stream-history-heading">
   <div class="modal-top"><h2 id="stream-history-heading">Stream history</h2><button type="button" class="icon-button close" data-close="stream-history" aria-label="Close history"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
@@ -122,6 +128,31 @@
     <p id="favorite-picker-status" class="watch-note" role="status"></p>
     <div class="favorite-actions"><button type="submit" class="watch-button selected" id="favorite-picker-save">Save</button></div>
   </form>
+</dialog>
+<dialog id="favorite-manager" class="modal favorite-dialog favorite-manager" aria-labelledby="favorite-manager-heading">
+  <div class="modal-top"><h2 id="favorite-manager-heading">Manage Favorites</h2><button type="button" class="icon-button close" data-close="favorite-manager" aria-label="Close Favorites manager"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="favorite-manager-body">
+    <section aria-labelledby="manager-order-heading">
+      <h3 id="manager-order-heading">Tab order</h3>
+      <ol id="manager-tab-order"></ol>
+    </section>
+    <section aria-labelledby="manager-creators-heading">
+      <h3 id="manager-creators-heading">Creators</h3>
+      <label for="manager-channel-tab">Channel tab</label>
+      <select id="manager-channel-tab"></select>
+      <form id="manager-add-form">
+        <label for="manager-creator-input">Known creator name, YouTube channel ID or /channel/ link</label>
+        <div class="manager-row-actions"><input id="manager-creator-input" list="manager-known-creators" type="text" maxlength="256" autocomplete="off" required><button id="manager-add" class="watch-button" type="submit">Add</button></div>
+        <datalist id="manager-known-creators"></datalist>
+      </form>
+      <label for="manager-creator-search">Find in this tab</label>
+      <input id="manager-creator-search" type="search" placeholder="Search creators…">
+      <p id="manager-empty" class="watch-note" hidden></p>
+      <ul id="manager-creators"></ul>
+    </section>
+  </div>
+  <p id="manager-status" class="watch-note" role="status"></p>
+  <div class="favorite-actions"><button type="button" id="manager-save" class="watch-button selected" disabled>Save changes</button></div>
 </dialog>
 <dialog id="favorite-editor" class="modal favorite-dialog" aria-labelledby="favorite-editor-title">
   <div class="modal-top"><h2 id="favorite-editor-title">New favorite tab</h2><button type="button" class="icon-button close" data-close="favorite-editor" aria-label="Close tab editor"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>

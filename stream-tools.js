@@ -1,11 +1,61 @@
-import { channelName, creatorPlans, safeChannelPhoto, streamLibrary, validVideoId } from './stream-library.mjs?v=20261112-avatars1';
+import { channelName, creatorPlans, safeChannelPhoto, streamLibrary, validVideoId } from './stream-library.mjs?v=20261112-discovery1';
 
-export function setupStreamTools({ openDialog, closeDialog, play, onVisibilityChange, time }) {
+export function setupStreamTools({ openDialog, closeDialog, play, onVisibilityChange, time, liveCandidates }) {
   const $ = id => document.getElementById(id);
   const historyDialog = $('stream-history');
   const hiddenDialog = $('hidden-content');
   const hideDialog = $('stream-hide-dialog');
+  const surprise = $('surprise-dialog');
   let hideTarget;
+  let picked, surpriseRound = 0, seen = new Set();
+
+  async function pickStream() {
+    const round = ++surpriseRound;
+    const previous = picked?.id;
+    picked = null;
+    $('surprise-preview').hidden = true;
+    $('surprise-watch').disabled = $('surprise-again').disabled = true;
+    $('surprise-status').textContent = 'Looking for a live stream…';
+    try {
+      const candidates = await liveCandidates();
+      if (round !== surpriseRound || !surprise.open) return;
+      let available = candidates.filter(item => !seen.has(item.id));
+      if (!available.length && candidates.length > 1) {
+        seen = new Set(previous ? [previous] : []);
+        available = candidates.filter(item => item.id !== previous);
+      }
+      if (!available.length) {
+        $('surprise-status').textContent = 'No live streams match this view.';
+        return;
+      }
+      picked = available[Math.floor(Math.random() * available.length)];
+      seen.add(picked.id);
+      $('surprise-image').src = 'https://i.ytimg.com/vi/' + picked.id + '/hqdefault.jpg';
+      $('surprise-name').textContent = picked.title || 'YouTube stream';
+      $('surprise-channel').textContent = channelName(picked.channel) || 'YouTube';
+      $('surprise-status').textContent = '';
+      $('surprise-preview').hidden = false;
+      $('surprise-watch').disabled = false;
+      $('surprise-again').disabled = candidates.length < 2;
+    } catch (error) {
+      if (round === surpriseRound && surprise.open) $('surprise-status').textContent = error.message;
+    }
+  }
+  $('surprise-open').addEventListener('click', () => {
+    if (surprise.open) return;
+    picked = null;
+    seen = new Set();
+    openDialog(surprise);
+    void pickStream();
+  });
+  $('surprise-again').addEventListener('click', () => { void pickStream(); });
+  $('surprise-watch').addEventListener('click', () => {
+    if (!picked) return;
+    if (streamLibrary.isHidden(picked)) { void pickStream(); return; }
+    const id = picked.id;
+    surprise.close();
+    play(id);
+  });
 
   function action(label, onClick) {
     const button = document.createElement('button');

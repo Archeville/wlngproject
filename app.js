@@ -1,5 +1,5 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
-import { setupFavorites } from './favorites.js?v=20261112-favoritesrail1';
+import { setupFavorites } from './favorites.js?v=20261112-favoriteviewers1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null };
@@ -57,7 +57,7 @@ import { setupFavorites } from './favorites.js?v=20261112-favoritesrail1';
     updateAgencyNavigation();
     const query = $('#search').value.trim().toLocaleLowerCase();
     const nameQuery=extraFilters()?$('#filter-name').value.trim().toLocaleLowerCase():'';const minViewers=extraFilters()?Math.max(0,Math.min(1e9,Number($('#filter-viewers').value)||0)):0;
-    const viewStreams = state.streams.filter(x => state.favoritesOnly ? favorites.matches(x) : state.org === 'all' || x.channel?.org === state.org);
+    const viewStreams = state.streams.filter(x => state.favoritesOnly ? favorites.matches(x, streamStatus(x)) : state.org === 'all' || x.channel?.org === state.org);
     const items = viewStreams.filter(x => (!nameQuery||((x.channel?.name||'')+' '+(x.channel?.english_name||'')).toLocaleLowerCase().includes(nameQuery)) && (minViewers===0||(Number.isFinite(x.live_viewers)&&x.live_viewers>=minViewers)) && streamStatus(x) === state.tab && `${x.title} ${x.channel?.name} ${x.channel?.english_name}`.toLocaleLowerCase().includes(query));
     $('#live-count').textContent = viewStreams.filter(x => streamStatus(x) === 'live').length;
     $('#upcoming-count').textContent = viewStreams.filter(x => streamStatus(x) === 'upcoming').length;

@@ -1,4 +1,4 @@
-import { defaultFavorites, maxFavoriteTabs, maxFavoriteChannels, validFavoriteChannel, validFavoriteTabs, matchesFavoriteTab } from './favorites-model.mjs?v=20261112-favorites1';
+import { defaultFavorites, maxFavoriteTabs, maxFavoriteChannels, validFavoriteChannel, validFavoriteTabs, matchesFavoriteTab } from './favorites-model.mjs?v=20261112-favoriteviewers1';
 
 export function setupFavorites({ openDialog, closeDialog, onChange }) {
   const $ = id => document.getElementById(id);
@@ -264,7 +264,7 @@ export function setupFavorites({ openDialog, closeDialog, onChange }) {
   return {
     open() { refresh(); void load().catch(() => {}); },
     openPicker,
-    matches: stream => matchesFavoriteTab(activeTab(), stream),
+    matches: (stream, status) => matchesFavoriteTab(activeTab(), stream, status),
     contains: id => tabs.some(tab => tab.type === 'channels' && tab.channels.includes(id))
   };
 }

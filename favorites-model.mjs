@@ -39,10 +39,10 @@ export function validFavoriteTabs(tabs) {
   });
 }
 
-export function matchesFavoriteTab(tab, stream) {
+export function matchesFavoriteTab(tab, stream, status = stream.status) {
   if (tab.type === 'channels') return tab.channels.includes(stream.channel?.id);
   const { title, agency, minViewers } = tab.rules;
   return (!title || (typeof stream.title === 'string' && stream.title.toLowerCase().includes(title.toLowerCase()))) &&
     (!agency || agency === 'all' || stream.channel?.org === agency) &&
-    (!minViewers || (Number.isFinite(stream.live_viewers) && stream.live_viewers >= minViewers));
+    (status !== 'live' || !minViewers || (Number.isFinite(stream.live_viewers) && stream.live_viewers >= minViewers));
 }

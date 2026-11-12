@@ -5,7 +5,7 @@
 <meta name="description" content="come and see by yourself"><meta property="og:description" content="come and see by yourself"><meta property="og:title" content="WLNG"><link rel="icon" href="/favicon.ico?v=20261106"><meta name="referrer" content="strict-origin-when-cross-origin">
 <title>WLNG — Stream hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261105-pipfix1"><link rel="stylesheet" href="themes.css?v=20261107-agencynav2"><link rel="stylesheet" href="watch.css?v=20261112-miniwatch1"><link rel="stylesheet" href="mobile.css?v=20261108-discord1"><script defer src="config.js?v=20261109-api1"></script><script type="module" src="app.js?v=20261112-channel1"></script><script defer src="search-motion.js?v=20261105-pipfix1"></script><script type="module" src="auth.js?v=20261108-sectiontabs1"></script><script type="module" src="xp.js?v=20261109-refill2"></script><script type="module" src="account.js?v=20261105-pipfix1"></script>
+<link rel="stylesheet" href="styles.css?v=20261105-pipfix1"><link rel="stylesheet" href="themes.css?v=20261107-agencynav2"><link rel="stylesheet" href="watch.css?v=20261112-miniwatch1"><link rel="stylesheet" href="mobile.css?v=20261108-discord1"><script defer src="config.js?v=20261109-api1"></script><script type="module" src="app.js?v=20261112-manage1"></script><script defer src="search-motion.js?v=20261105-pipfix1"></script><script type="module" src="auth.js?v=20261108-sectiontabs1"></script><script type="module" src="xp.js?v=20261109-refill2"></script><script type="module" src="account.js?v=20261105-pipfix1"></script>
 <script type="module" src="skins.js?v=20261112-layout1"></script><link rel="stylesheet" href="multiview.css?v=20261112-discovery1"><script type="module" src="multiview.js?v=20261112-discovery1"></script><link rel="stylesheet" href="profile-editor.css?v=20261112-fit2"><script type="module" src="profile-editor.js?v=20261112-fit2"></script><link rel="stylesheet" href="mini-player.css?v=20261112-miniwatch1"><link rel="stylesheet" href="favorites.css?v=20261112-discovery1"><link rel="stylesheet" href="stream-tools.css?v=20261112-discovery1"></head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -140,12 +140,6 @@
       <h3 id="manager-creators-heading">Creators</h3>
       <label for="manager-channel-tab">Channel tab</label>
       <select id="manager-channel-tab"></select>
-      <form id="manager-add-form">
-        <label for="manager-creator-input">Creator name, YouTube link or channel ID</label>
-        <div class="manager-row-actions"><input id="manager-creator-input" list="manager-known-creators" type="text" maxlength="256" autocomplete="off" aria-describedby="manager-add-status" required><button id="manager-add" class="watch-button" type="submit">Add</button></div>
-        <datalist id="manager-known-creators"></datalist>
-        <p id="manager-add-status" class="watch-note" role="status"></p>
-      </form>
       <label for="manager-creator-search">Find in this tab</label>
       <input id="manager-creator-search" type="search" placeholder="Search creators…">
       <p id="manager-empty" class="watch-note" hidden></p>

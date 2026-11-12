@@ -40,39 +40,6 @@ export function validFavoriteTabs(tabs) {
   });
 }
 
-function youtubeUrl(text) {
-  try {
-    const url = new URL(/^https?:\/\//i.test(text) ? text : 'https://' + text);
-    if (!url.username && !url.password && !url.port && ['https:', 'http:'].includes(url.protocol) &&
-        ['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(url.hostname)) return url;
-  } catch { /* the input may be a creator name */ }
-  return null;
-}
-
-export const validYouTubeId = id => typeof id === 'string' && /^UC[A-Za-z0-9_-]{22}$/.test(id);
-export const validYouTubeHandle = handle => typeof handle === 'string' && /^[\p{L}\p{M}\p{N}_.·-]{1,30}$/u.test(handle);
-
-export function youtubeChannelId(value) {
-  const text = value.trim();
-  if (validYouTubeId(text)) return text;
-  const url = youtubeUrl(text);
-  return /^\/channel\/(UC[A-Za-z0-9_-]{22})(?:\/|$)/.exec(url?.pathname || '')?.[1] || '';
-}
-
-export function youtubeHandle(value) {
-  const text = value.trim();
-  let handle = text.slice(1);
-  if (!text.startsWith('@')) {
-    const segment = youtubeUrl(text)?.pathname.split('/')[1] || '';
-    try {
-      const decoded = decodeURIComponent(segment);
-      if (!decoded.startsWith('@')) return '';
-      handle = decoded.slice(1);
-    } catch { return ''; }
-  }
-  return validYouTubeHandle(handle) ? handle : '';
-}
-
 export function matchesFavoriteTab(tab, stream, status = stream.status) {
   if (tab.type === 'channels') return tab.channels.includes(stream.channel?.id);
   const { title, agency, minViewers } = tab.rules;

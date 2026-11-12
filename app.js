@@ -1,5 +1,5 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
-import { setupFavorites } from './favorites.js?v=20261112-channel1';
+import { setupFavorites } from './favorites.js?v=20261112-manage1';
 import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-discovery1';
 import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
 (() => {

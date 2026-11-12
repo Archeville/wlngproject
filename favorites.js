@@ -1,5 +1,5 @@
-import { defaultFavorites, maxFavoriteTabs, maxFavoriteChannels, validFavoriteChannel, validFavoriteTabs, matchesFavoriteTab } from './favorites-model.mjs?v=20261112-channel1';
-import { setupFavoriteManager } from './favorite-manager.js?v=20261112-channel1';
+import { defaultFavorites, maxFavoriteTabs, maxFavoriteChannels, validFavoriteChannel, validFavoriteTabs, matchesFavoriteTab } from './favorites-model.mjs?v=20261112-manage1';
+import { setupFavoriteManager } from './favorite-manager.js?v=20261112-manage1';
 
 export function setupFavorites({ openDialog, closeDialog, onChange }) {
   const $ = id => document.getElementById(id);

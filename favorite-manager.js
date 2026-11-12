@@ -1,4 +1,4 @@
-import { maxFavoriteChannels, validYouTubeId, youtubeChannelId, youtubeHandle } from './favorites-model.mjs?v=20261112-channel1';
+import { maxFavoriteChannels } from './favorites-model.mjs?v=20261112-manage1';
 import { streamLibrary } from './stream-library.mjs?v=20261112-discovery1';
 
 export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeTab, save, canReorder }) {
@@ -8,12 +8,9 @@ export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeT
   const list = $('manager-creators');
   const order = $('manager-tab-order');
   const status = $('manager-status');
-  const addStatus = $('manager-add-status');
-  const add = $('manager-add');
   const submit = $('manager-save');
-  const input = $('manager-creator-input');
+  const search = $('manager-creator-search');
   let draft = [], original = '', loading = false, saving = false, dragged = null;
-  let lookup = null;
   const dirty = () => JSON.stringify(draft) !== original;
   const current = () => draft.find(tab => tab.id === tabSelect.value && tab.type === 'channels');
   const nameOf = id => streamLibrary.creator(id).name || id;
@@ -83,7 +80,7 @@ export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeT
 
   function renderCreators() {
     const selected = current();
-    const query = $('manager-creator-search').value.trim().toLowerCase();
+    const query = search.value.trim().toLowerCase();
     const channels = selected?.channels.filter(id => (nameOf(id) + ' ' + id).toLowerCase().includes(query)) || [];
     list.replaceChildren(...channels.map(id => {
       const row = document.createElement('li');
@@ -130,10 +127,8 @@ export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeT
     }));
     $('manager-empty').hidden = channels.length > 0 || !selected;
     $('manager-empty').textContent = query ? 'No creators match your search.' : 'This tab has no creators yet.';
-    tabSelect.disabled = loading || saving || Boolean(lookup);
-    add.disabled = !selected || saving || Boolean(lookup) || selected.channels.length >= maxFavoriteChannels;
-    input.disabled = !selected || saving || Boolean(lookup);
-    submit.disabled = loading || saving || Boolean(lookup) || !draft.length || !dirty();
+    tabSelect.disabled = loading || saving;
+    submit.disabled = loading || saving || !draft.length || !dirty();
   }
 
   function render(preferred = tabSelect.value) {
@@ -148,8 +143,7 @@ export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeT
     if (dialog.open || loading || saving) return;
     draft = [];
     loading = true;
-    input.value = $('manager-creator-search').value = '';
-    addStatus.textContent = '';
+    search.value = '';
     status.textContent = 'Loading Favorites…';
     render();
     openDialog(dialog);
@@ -158,7 +152,6 @@ export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeT
       if (!dialog.open) return;
       draft = structuredClone(tabs);
       original = JSON.stringify(draft);
-      $('manager-known-creators').replaceChildren(...streamLibrary.knownCreators().map(creator => new Option(creator.name, creator.id)));
       status.textContent = '';
     } catch (error) {
       status.textContent = error.message;
@@ -167,67 +160,10 @@ export function setupFavoriteManager({ openDialog, closeDialog, getTabs, activeT
       if (dialog.open) render(activeTab().id);
     }
   });
-  dialog.addEventListener('close', () => {
-    if (dialog.open) return;
-    lookup?.abort();
-    lookup = null;
-  });
-  tabSelect.addEventListener('change', () => {
-    addStatus.textContent = '';
-    renderCreators();
-  });
-  input.addEventListener('input', () => { addStatus.textContent = ''; });
-  $('manager-creator-search').addEventListener('input', renderCreators);
-  $('manager-add-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const tab = current();
-    if (!tab || saving || lookup || tab.channels.length >= maxFavoriteChannels) return;
-    const value = input.value.trim();
-    const known = streamLibrary.knownCreators().filter(item => item.id === value || item.name.toLowerCase() === value.toLowerCase());
-    let id = youtubeChannelId(value) || (known.length === 1 ? known[0].id : '');
-    const handle = id ? '' : youtubeHandle(value);
-    if (handle) {
-      const controller = new AbortController();
-      lookup = controller;
-      addStatus.textContent = 'Looking up @' + handle + '…';
-      renderCreators();
-      try {
-        const params = new URLSearchParams({ handle });
-        const response = await fetch('/api/channels/resolve?' + params, { signal: controller.signal });
-        const channel = await response.json();
-        if (lookup !== controller || !dialog.open || !draft.includes(tab)) return;
-        if (!response.ok || !validYouTubeId(channel?.id)) {
-          addStatus.textContent = channel?.error || 'Couldn’t look up that handle. Paste the channel ID or try again.';
-          return;
-        }
-        id = channel.id;
-        streamLibrary.remember([{ channel }]);
-      } catch {
-        if (lookup === controller && dialog.open) addStatus.textContent = 'Couldn’t look up that handle. Paste the channel ID or try again.';
-        return;
-      } finally {
-        if (lookup === controller) {
-          lookup = null;
-          if (dialog.open) renderCreators();
-        }
-      }
-    }
-    if (!id) {
-      addStatus.textContent = 'Choose a known creator or paste a YouTube channel link or ID.';
-      return;
-    }
-    if (tab.channels.includes(id)) {
-      addStatus.textContent = 'That creator is already in ' + tab.name + '.';
-      return;
-    }
-    if (tab.channels.length >= maxFavoriteChannels) return;
-    tab.channels.push(id);
-    input.value = $('manager-creator-search').value = '';
-    renderCreators();
-    addStatus.textContent = 'Added ' + nameOf(id) + ' to ' + tab.name + '. Select Save changes to keep it.';
-  });
+  tabSelect.addEventListener('change', renderCreators);
+  search.addEventListener('input', renderCreators);
   submit.addEventListener('click', async () => {
-    if (saving || loading || lookup || !dirty()) return;
+    if (saving || loading || !dirty()) return;
     saving = true;
     render();
     try {

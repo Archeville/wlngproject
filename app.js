@@ -173,7 +173,8 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
     if (!miniSetting.checked) { closeDialog(playerDialog); return; }
     if (document.fullscreenElement && playerDialog.contains(document.fullscreenElement)) {
       try { await document.exitFullscreen(); } catch { closeDialog(playerDialog); return; }
-      if (!playerDialog.open || playerDialog.classList.contains('is-mini')) return;
+      if (!playerDialog.open || playerDialog.classList.contains('is-mini') || closingDialogs.has(playerDialog)) return;
+      if (!miniSetting.checked) { closeDialog(playerDialog); return; }
     }
     if (operaPipDialog.open) operaPipDialog.close();
     closePip();
@@ -403,11 +404,15 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
   updateNavigation();
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeDialog(document.getElementById(b.dataset.close))));
   document.querySelectorAll('dialog').forEach(dialog => {
-    dialog.addEventListener('cancel', event => { event.preventDefault(); closeDialog(dialog); });
+    const dismiss = () => {
+      if (dialog === playerDialog && !dialog.classList.contains('is-mini')) void minimizePlayer();
+      else closeDialog(dialog);
+    };
+    dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(); });
     dialog.addEventListener('click', event => {
       if (dialog.classList.contains('is-mini')) return;
       const rect = dialog.getBoundingClientRect();
-      if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeDialog(dialog);
+      if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dismiss();
     });
   });
   playerDialog.addEventListener('close', () => {

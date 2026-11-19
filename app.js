@@ -1,10 +1,13 @@
 import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-profilecolors1';
 import { setupFavorites } from './favorites.js?v=20261112-manage1';
 import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-discovery1';
-import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
+import { setupStreamTools } from './stream-tools.js?v=20261120-discovery2';
+import { setupDiscoveryFeatures, validChannelId } from './discovery-features.js?v=20261120-discovery2';
+import { setupLiveNotifications } from './live-notifications.js?v=20261120-discovery2';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null, playerItem: null };
+  let discoveryFeatures,liveNotifications;
   const pref = (key, value) => { try { if (value !== undefined) localStorage.setItem(key, value); return localStorage.getItem(key); } catch { return null; } };
   const validOrgs = ['Hololive', 'Nijisanji', 'Independents', 'all'];
   state.org = validOrgs.includes(pref('wlng-default-org')) ? pref('wlng-default-org') : 'Hololive';
@@ -72,10 +75,13 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
       const name = x.channel?.english_name || x.channel?.name || 'Unknown channel';
       const photo = safeChannelPhoto(x.channel?.photo); const label = streamStatus(x) === 'live' ? '● LIVE' : esc(time(x.start_scheduled || x.available_at));
       const viewers = Number.isFinite(x.live_viewers) ? `${new Intl.NumberFormat().format(x.live_viewers)} watching` : '';
-      return `<article class="card" data-id="${esc(x.id)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>'}<div class="card-text"><h3>${esc(x.title)}</h3><p>${esc(name)}</p><span class="extra">${esc(viewers)}</span></div></div><button class="stream-card-open" type="button" aria-label="Watch ${esc(x.title)}"></button><button class="stream-hide-trigger" type="button" aria-label="Hide options for ${esc(x.title)}" title="Hide options">⋯</button></article>`;
+      const avatar=photo ? `<img class="avatar" loading="lazy" src="${esc(photo)}" alt="">` : '<span class="avatar"></span>';
+      const channel=validChannelId(x.channel?.id),channelAttr=channel?`data-channel-id="${esc(x.channel.id)}"`:'';
+      return `<article class="card" data-id="${esc(x.id)}"><div class="thumbnail"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="badge ${streamStatus(x) === 'upcoming' ? 'upcoming' : ''}">${label}</span></div><div class="card-body">${channel?`<button class="stream-channel-link avatar-link" type="button" ${channelAttr} aria-label="Open ${esc(name)} channel">${avatar}</button>`:avatar}<div class="card-text"><h3>${esc(x.title)}</h3>${channel?`<button type="button" class="stream-channel-link card-channel-name" ${channelAttr}>${esc(name)}</button>`:`<p>${esc(name)}</p>`}<span class="extra">${esc(viewers)}</span></div></div><button class="stream-card-open" type="button" aria-label="Watch ${esc(x.title)}"></button><button class="stream-watch-later" aria-pressed="false" type="button" aria-label="Save to Watch Later" title="Save to Watch Later"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg></button><button class="stream-hide-trigger" type="button" aria-label="Hide options for ${esc(x.title)}" title="Hide options">⋯</button></article>`;
     }).join('');
     if (!items.length) message(state.favoritesOnly ? '<strong>No streams match this tab right now.</strong><br>Try the other stream status or choose another tab.' : query ? '<strong>No matches found.</strong><br>Try a different search.' : '<strong>Nothing here just yet.</strong><br>Check back soon or explore the other tab.'); else $('#status').hidden = true;
     animateResults();
+    discoveryFeatures?.updateButtons();
   }
   async function load() {
     const base = window.WLNG_CONFIG?.apiBase?.trim();
@@ -86,7 +92,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
       if (!Array.isArray(data.streams)) throw new Error('Invalid feed');
       state.streams = data.streams.filter(x => validId(x.id) && ['live','upcoming'].includes(x.status)); state.updated = data.updatedAt;
       streamLibrary.remember(state.streams);
-      window.WLNG_STREAMS=state.streams;window.dispatchEvent(new CustomEvent('wlng-streams',{detail:state.streams}));
+      window.WLNG_STREAMS=state.streams;window.WLNG_FEED_FRESH=!data.stale;window.dispatchEvent(new CustomEvent('wlng-streams',{detail:state.streams}));
       const stamp = data.updatedAt ? new Date(data.updatedAt) : null;
       $('#updated').textContent = stamp && !Number.isNaN(stamp.valueOf()) ? `${data.stale ? 'CACHED · ' : ''}UPDATED ${stamp.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}` : 'STREAM FEED CONNECTED'; render();
     } catch { $('#updated').textContent = 'CONNECTION INTERRUPTED'; message('<strong>We couldn’t load the stream feed.</strong><br>Please try again in a little while.'); }
@@ -108,6 +114,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
     $('#player-dialog').classList.add('is-large'); $('#watch-large').textContent = 'Popup'; $('#watch-large').setAttribute('aria-pressed','true'); state.playerId = id; updatePlayerFavorite(); renderRelated(item); $('#chat-slot').replaceChildren(); showWatchPanel('activity'); $('#watch-main').scrollTop = 0; $('#watch-message').textContent = 'If playback is unavailable, open the stream on YouTube.';
     const viewers=$('#player-viewers');const hasViewers=streamStatus(item)==='live'&&Number.isFinite(item.live_viewers)&&item.live_viewers>=0;viewers.hidden=!hasViewers;viewers.textContent=hasViewers?new Intl.NumberFormat().format(item.live_viewers)+' watching':'';
     $('#player-title').textContent = item.title || 'YouTube stream'; $('#player-channel').textContent = item.channel?.english_name || item.channel?.name || 'YouTube';
+    discoveryFeatures?.updateButtons();
     shareStatus.hidden = true;
     clearTimeout(shareTimer);
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
@@ -344,7 +351,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
     updateAgencyNavigation();
   }
   $('#hub-toggle').addEventListener('click',()=>{
-    const returning = state.favoritesOnly || !$('#multiview').hidden;
+    const returning = state.favoritesOnly || !$('#multiview').hidden || document.body.classList.contains('discovery-extra-open');
     const expanded = returning || $('#hub-toggle').getAttribute('aria-expanded') !== 'true';
     $('#hub-toggle').setAttribute('aria-expanded', String(expanded));
     $('#agency-nav').hidden = !expanded;
@@ -365,6 +372,9 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
   $('#grid').addEventListener('click', event => {
     const card = event.target.closest('[data-id]');
     if (!card) return;
+    const channel=event.target.closest('[data-channel-id]');
+    if(channel){discoveryFeatures?.openChannel(channel.dataset.channelId);return;}
+    if(event.target.closest('.stream-watch-later')){void discoveryFeatures?.add(state.streams.find(item=>item.id===card.dataset.id));return;}
     if (event.target.closest('.stream-hide-trigger')) {
       streamTools.hidePicker(state.streams.find(item => item.id === card.dataset.id));
     } else play(card.dataset.id);
@@ -485,6 +495,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
   window.addEventListener('wlng-refresh-streams',()=>{if(feedPending||Date.now()-lastFeedRequest<30000){window.dispatchEvent(new Event('wlng-feed-refreshed'));return;}lastFeedRequest=Date.now();feedPending=true;load().finally(()=>{feedPending=false;window.dispatchEvent(new Event('wlng-feed-refreshed'));});});
   const favorites = setupFavorites({ openDialog, closeDialog, onChange: () => {
     updatePlayerFavorite();
+    liveNotifications?.favoritesChanged();
     if (state.favoritesOnly) {
       if (state.updated) render();
       else streamTools.renderCreators(favorites.activeTab(), state.streams, false);
@@ -500,6 +511,9 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
     if (state.playerItem) renderRelated(state.playerItem);
   } });
   window.WLNG_FAVORITES = { getTabs: favorites.getTabs, activeTab: favorites.activeTab };
+  discoveryFeatures=setupDiscoveryFeatures({favorites,getStreams:()=>state.streams,getPlayer:()=>state.playerItem,play,time,onNavigate:()=>{if(state.favoritesOnly)setFavoritesMode(false);closeMobileNavigation();}});
+  liveNotifications=setupLiveNotifications({favorites,getStreams:()=>state.streams,play});
+  discoveryFeatures.route();
   lastFeedRequest=Date.now();
   const sharedId = new URLSearchParams(location.search).get('watch');
   void load().then(() => {

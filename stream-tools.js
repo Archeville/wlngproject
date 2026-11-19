@@ -173,11 +173,15 @@ export function setupStreamTools({ openDialog, closeDialog, play, onVisibilityCh
           : loaded ? 'Offline' : 'Waiting for the stream feed';
         const row = document.createElement('li');
         row.dataset.creatorStatus = plan?.status || 'offline';
-        const control = document.createElement(plan ? 'button' : 'a');
+        const usableChannel = /^UC[A-Za-z0-9_-]{22}$/.test(id);
+        const control = document.createElement(usableChannel||plan ? 'button' : 'a');
         control.className = 'creator-avatar';
         control.title = name + ' · ' + state;
-        control.setAttribute('aria-label', control.title + (plan ? ' · Open stream' : ' · Open YouTube channel'));
-        if (plan) {
+        control.setAttribute('aria-label', control.title + (usableChannel?' · Open creator page':plan ? ' · Open stream' : ' · Open YouTube channel'));
+        if(usableChannel){
+          control.type='button';
+          control.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('wlng-open-channel',{detail:id})));
+        } else if (plan) {
           control.type = 'button';
           control.addEventListener('click', () => play(plan.stream.id));
         } else {

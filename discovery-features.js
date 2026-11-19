@@ -9,7 +9,7 @@ const link=(id,label='Open on YouTube')=>{const a=node('a','watch-button',label)
 export function setupDiscoveryFeatures({favorites,getStreams,getPlayer,play,time,onNavigate}){
   let owner=window.WLNG_AUTH_USER||null,generation=0,items=[],loaded=false,pending=null,busy=false,mode='',channelId='',channelData=null,channelGeneration=0;
   const detailsCache=new Map(),detailsPending=new Map();
-  const nav=button('Watch later',()=>openLater(),'nav-item');nav.id='watch-later-open';nav.setAttribute('aria-pressed','false');nav.prepend(node('span','later-nav-icon','▱'));$('favorites-open').after(nav);
+  const nav=button('Watch later',()=>openLater(),'nav-item');nav.id='watch-later-open';nav.setAttribute('aria-pressed','false');nav.innerHTML='<svg aria-hidden="true"><use href="#i-clock"/></svg><span>Watch later</span>';$('stream-history-open').before(nav);
   const panel=node('section','discovery-extra');panel.id='media-discovery-section';panel.hidden=true;
   const head=node('div','discovery-extra-head'),title=node('h1','','Watch later.'),back=button('Back to stream hub',()=>{$('hub-toggle').click();});head.append(title,back);
   const status=node('p','discovery-extra-status');status.setAttribute('role','status');

@@ -344,7 +344,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
     updateAgencyNavigation();
   }
   $('#hub-toggle').addEventListener('click',()=>{
-    const returning = state.favoritesOnly || !$('#multiview').hidden;
+    const returning = state.favoritesOnly || !$('#multiview').hidden || document.body.classList.contains('plus-editor-open');
     const expanded = returning || $('#hub-toggle').getAttribute('aria-expanded') !== 'true';
     $('#hub-toggle').setAttribute('aria-expanded', String(expanded));
     $('#agency-nav').hidden = !expanded;
@@ -390,6 +390,7 @@ import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
   };
   $('#menu-toggle').addEventListener('click', () => { document.body.classList.toggle('nav-collapsed'); updateNavigation(); if(mobile.matches&&document.body.classList.contains('nav-collapsed'))$('#hub-toggle').focus(); });
   $('#multiview-open').addEventListener('click',()=>{if(state.favoritesOnly){setFavoritesMode(false);if(state.updated)render();}closeMobileNavigation();});
+  window.addEventListener('wlng-editor-open',()=>{if(state.favoritesOnly){setFavoritesMode(false);if(state.updated)render();}closeMobileNavigation();});
   $('#nav-shade').addEventListener('click',()=>closeMobileNavigation(true));
   $('#search').addEventListener('focus',()=>closeMobileNavigation());
   document.addEventListener('keydown',event=>{

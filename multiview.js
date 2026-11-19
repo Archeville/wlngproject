@@ -208,5 +208,4 @@ window.addEventListener('wlng-feed-refreshed',()=>status(''));
 window.addEventListener('wlng-streams',e=>{streams=Array.isArray(e.detail)?e.detail:[];lastFeedAt=Date.now();channels();refreshFavoriteImport();});
 function show(show){if(!show&&expanded)setExpanded(false);active=show;panel.hidden=!show;$('#discover').hidden=show;$('#multiview-open').classList.toggle('selected',show);$('#multiview-open').setAttribute('aria-pressed',String(show));$('#hub-toggle').classList.toggle('selected',!show&&$('#favorites-open').getAttribute('aria-pressed')!=='true');finishDrag();finishPan();if(show){channels();if(Date.now()-lastFeedAt>60000)window.dispatchEvent(new Event('wlng-refresh-streams'));}else{focusedAudio=null;removeNodes();updateAudio();$('#mv-audio-status').textContent='';}}
 $('#multiview-open').addEventListener('click',()=>show(true));for(const el of document.querySelectorAll('#hub-toggle,.agency-link,#favorites-open'))el.addEventListener('click',()=>show(false));
-window.addEventListener('wlng-editor-open',()=>show(false));
 channels();saveOptions();

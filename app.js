@@ -2,7 +2,6 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
 import { setupFavorites } from './favorites.js?v=20261112-manage1';
 import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-discovery1';
 import { setupStreamTools } from './stream-tools.js?v=20261112-discovery1';
-import { setupClippers } from './clippers.js?v=20261119-clippers1';
 (() => {
   const $ = (s) => document.querySelector(s);
   const state = { tab: 'live', org: 'Hololive', streams: [], updated: null, favoritesOnly: false, playerId: null, playerItem: null };
@@ -113,10 +112,9 @@ import { setupClippers } from './clippers.js?v=20261119-clippers1';
     clearTimeout(shareTimer);
     $('#youtube-link').href = `https://www.youtube.com/watch?v=${id}`;
     $('#chat-youtube-link').href = $('#youtube-link').href;
-    const frame = document.createElement('iframe'); frame.src = new URL('player-embed.html?video='+encodeURIComponent(id),location.href).href; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); clippers.openStream(item, !item.status || streamStatus(item) === 'live'); void loadDescription(item);
+    const frame = document.createElement('iframe'); frame.src = new URL('player-embed.html?video='+encodeURIComponent(id),location.href).href; frame.title = item.title || 'YouTube stream'; frame.allow = 'autoplay; encrypted-media; picture-in-picture; web-share'; frame.allowFullscreen = true; frame.referrerPolicy = 'strict-origin-when-cross-origin'; $('#player-slot').replaceChildren(frame); openDialog($('#player-dialog')); void loadDescription(item);
   }
   const playerDialog = $('#player-dialog');
-  const clippers = setupClippers();
   const miniControls = $('.mini-controls');
   const miniResize = $('#mini-resize');
   const miniSetting = $('#mini-on-close');
@@ -201,7 +199,6 @@ import { setupClippers } from './clippers.js?v=20261119-clippers1';
     miniControls.hidden = true;
     closeMobileNavigation();
     playerDialog.showModal();
-    if (state.playerItem) clippers.openStream(state.playerItem, !state.playerItem.status || streamStatus(state.playerItem) === 'live');
     if (watchScroll) {
       $('#watch-main').scrollTop = watchScroll[0];
       $('#watch-shell').scrollTop = watchScroll[1];
@@ -421,7 +418,6 @@ import { setupClippers } from './clippers.js?v=20261119-clippers1';
   playerDialog.addEventListener('close', () => {
     // Switching between modal and corner mode closes and immediately reopens the dialog.
     if (playerDialog.open) return;
-    clippers.closeStream();
     if (operaPipDialog.open) operaPipDialog.close();
     stopPanelDrag();
     closePip(false);

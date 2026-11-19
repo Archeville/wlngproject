@@ -2,7 +2,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
 import { setupFavorites } from './favorites.js?v=20261112-manage1';
 import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-discovery1';
 import { setupStreamTools } from './stream-tools.js?v=20261120-discovery2';
-import { setupDiscoveryFeatures, validChannelId } from './discovery-features.js?v=20261120-discovery4';
+import { setupDiscoveryFeatures, validChannelId } from './discovery-features.js?v=20261120-discovery5';
 import { setupLiveNotifications } from './live-notifications.js?v=20261120-discovery2';
 (() => {
   const $ = (s) => document.querySelector(s);

@@ -1,0 +1,70 @@
+#settings-dialog.clipper-settings-layout {
+  box-sizing:border-box; width:min(940px,calc(100vw - 40px)); max-width:none;
+  max-height:calc(100dvh - 36px); padding:0; border:0; background:transparent;
+  box-shadow:none; overflow:visible; scrollbar-gutter:auto;
+}
+#settings-dialog.clipper-settings-layout[open] {
+  display:grid; grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);
+  align-items:start; gap:18px;
+}
+.settings-main {
+  min-width:0; max-height:calc(100dvh - 36px); overflow-y:auto;
+  border:1px solid var(--border); border-radius:17px; padding:22px;
+  background:var(--surface); box-shadow:7px 9px 0 var(--layer); scrollbar-width:thin;
+}
+.clipper-settings {
+  --clipper-accent:#ffae70; min-width:0; max-height:calc(100dvh - 36px); overflow-y:auto;
+  padding:22px; background:#211710; color:#ffe9d5; border:1px solid #b96736;
+  border-radius:17px; box-shadow:6px 8px 0 #663a225c,0 16px 40px #0004;
+  scrollbar-width:thin;
+}
+.clipper-settings h2 { font:600 24px 'Space Grotesk',sans-serif; margin:0 0 18px; letter-spacing:-.6px; }
+.clipper-settings h2 span { color:var(--clipper-accent); }
+.clipper-setting { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 0; border-top:1px solid #9f643a47; }
+.clipper-setting label { font-size:13px; font-weight:600; }
+.clipper-setting p { margin:6px 0 0; font-size:11px; color:#d0a98c; line-height:1.45; }
+.clipper-settings :is(input,select) { accent-color:#ed9453; }
+.clipper-settings input { width:18px; height:18px; flex:0 0 18px; cursor:pointer; }
+.clipper-settings select { min-width:90px; padding:8px; font:inherit; font-size:12px; background:#38271c; color:#fff1e4; border:1px solid #9e663d; border-radius:7px; }
+.clipper-settings fieldset { margin:0; padding:0; border:0; min-width:0; }
+.clipper-settings fieldset:disabled { opacity:.38; filter:grayscale(.55); }
+.clipper-settings fieldset:disabled :is(input,select) { cursor:default; }
+.clipper-settings-note { color:#dbad8b; font-size:11px; line-height:1.65; margin:10px 0 0; }
+#clipper-support { color:#ffb587; }
+.clipper-controls { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; margin-right:auto; margin-left:16px; }
+.clipper-controls[hidden],.clipper-button[hidden] { display:none; }
+.clipper-button { background:#352218; color:#ffbf8c; border:1px solid #c27946; border-radius:7px; padding:8px 11px; cursor:pointer; font:600 12px 'DM Sans',sans-serif; white-space:nowrap; }
+.clipper-button:enabled:hover,.clipper-button:focus-visible { background:#59301c; border-color:#ffad6e; color:#fff; }
+.clipper-button:disabled { opacity:.42; cursor:default; }
+.clipper-button.recording { color:#fff; background:#7b2c19; border-color:#f98b60; }
+.clipper-progress { color:#f0a56c; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.clipper-status { color:var(--muted); font-size:11px; max-width:240px; overflow-wrap:anywhere; }
+.clipper-status:empty,.clipper-progress:empty { display:none; }
+#player-slot { isolation:isolate; }
+@media(min-width:781px) {
+  #player-dialog:not(.is-mini) .watch-shell:has(.clipper-controls:not([hidden])) { display:flex; flex-direction:column; }
+  #player-dialog:not(.is-mini) .watch-shell:has(.clipper-controls:not([hidden])) .watch-top { height:auto; min-height:62px; flex:0 0 auto; padding-block:8px; }
+  #player-dialog:not(.is-mini) .watch-shell:has(.clipper-controls:not([hidden])) .watch-layout { height:auto; flex:1; min-height:0; }
+}
+@media(max-width:1050px) {
+  .clipper-controls { margin-left:8px; gap:5px; }
+  .clipper-status { max-width:140px; font-size:10px; }
+  .clipper-progress { font-size:10px; }
+}
+@media(max-width:780px) {
+  #settings-dialog.clipper-settings-layout[open] { display:flex; flex-direction:column; inset:auto 0 0; margin:0; width:100%; max-height:94dvh; overflow:auto; padding:0 18px 22px; gap:0; background:var(--surface); border-radius:20px 20px 0 0; }
+  #settings-dialog .settings-main { display:contents; }
+  #settings-dialog .settings-main .modal-top { order:-2; align-self:stretch; margin:0 -18px 14px; }
+  #settings-dialog .clipper-settings { order:-1; width:100%; max-height:none; overflow:visible; margin:0 0 14px; box-shadow:none; border-radius:12px; padding:16px; }
+  #settings-dialog .settings-main > *:not(.modal-top) { width:100%; }
+  .clipper-settings h2 { font-size:19px; margin-bottom:8px; }
+  .clipper-setting { padding:12px 0; }
+  .watch-top:has(.clipper-controls:not([hidden])) { height:auto; min-height:60px; flex-wrap:wrap; padding-bottom:8px; gap:4px; }
+  .watch-top:has(.clipper-controls:not([hidden])) .clipper-controls { order:3; flex-basis:100%; margin:0; }
+  .clipper-button { min-height:36px; padding:6px 9px; font-size:11px; }
+  .clipper-status { max-width:none; flex:1; }
+  .player-modal.is-large:has(.clipper-controls:not([hidden])) .player-slot { position:relative; top:auto; }
+}
+@media(max-width:430px) {
+  .watch-top:has(.clipper-controls:not([hidden])) .clipper-status { flex-basis:100%; }
+}

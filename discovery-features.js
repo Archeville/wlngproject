@@ -16,7 +16,7 @@ export function setupDiscoveryFeatures({favorites,getStreams,getPlayer,play,time
   const body=node('div','discovery-extra-body');panel.append(head,status,body);document.querySelector('.workspace').append(panel);
   const toast=node('div','discovery-feedback');toast.hidden=true;toast.setAttribute('role','status');document.body.append(toast);let toastTimer;
   function feedback(message){const output=$('player-dialog').open?playerFeedback:toast;output.textContent=message;output.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>output.hidden=true,3500);}
-  const playerSave=button('▱ Watch later',()=>{const item=getPlayer();if(item)void add(item);});playerSave.id='player-watch-later';$('player-favorite').after(playerSave);
+  const playerSave=button('Watch later',()=>{const item=getPlayer();if(item)void add(item);});playerSave.id='player-watch-later';playerSave.style.display='inline-flex';playerSave.style.alignItems='center';playerSave.style.gap='6px';playerSave.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-clock"/></svg><span>Watch later</span>';$('player-favorite').after(playerSave);
   const playerFeedback=node('span','watch-note');playerFeedback.setAttribute('role','status');playerFeedback.hidden=true;playerSave.after(playerFeedback);
   const playerChannel=$('player-channel');playerChannel.classList.add('player-channel-link');playerChannel.tabIndex=0;playerChannel.setAttribute('role','button');playerChannel.title='Open creator page';
   function clickPlayerChannel(){const item=getPlayer();if(validChannelId(item?.channel?.id)){const dialog=$('player-dialog');if(dialog.open)dialog.close();openChannel(item.channel.id);}}
@@ -26,7 +26,8 @@ export function setupDiscoveryFeatures({favorites,getStreams,getPlayer,play,time
     for(const b of document.querySelectorAll('.stream-watch-later')){
       const active=ids.has(b.closest('[data-id]')?.dataset.id);b.classList.toggle('saved',active);b.setAttribute('aria-pressed',String(active));b.title=active?'Saved to Watch Later':'Save to Watch Later';
     }
-    playerSave.disabled=!current||busy;playerSave.textContent=current&&ids.has(current.id)?'✓ Saved':'▱ Watch later';
+    const saved=Boolean(current&&ids.has(current.id));
+    playerSave.disabled=!current||busy;playerSave.querySelector('span').textContent=saved?'Saved':'Watch later';playerSave.setAttribute('aria-pressed',String(saved));
     playerChannel.tabIndex=validChannelId(current?.channel?.id)?0:-1;playerChannel.classList.toggle('available',playerChannel.tabIndex===0);
   }
   async function request(input){
@@ -96,7 +97,9 @@ export function setupDiscoveryFeatures({favorites,getStreams,getPlayer,play,time
     const top=node('div','creator-page-header'),photo=safeChannelPhoto(info.photo);
     if(photo){const img=node('img','creator-page-avatar');img.alt='';img.src=photo;top.append(img);}
     const label=node('div','creator-page-label');label.append(node('h2','',name));if(info.org)label.append(node('p','',info.org==='Independents'?'Indie':info.org));
-    const external=node('a','watch-button','YouTube channel');external.href='https://www.youtube.com/channel/'+channelId;external.target='_blank';external.rel='noopener';top.append(label,external);body.append(top);
+    const external=node('a','watch-button','YouTube channel');external.href='https://www.youtube.com/channel/'+channelId;external.target='_blank';external.rel='noopener';
+    const favorite=button('♡ Favorite creator',()=>void favorites.openPicker({channel:{id:channelId,name}}));favorite.id='creator-favorite';
+    top.append(label,favorite,external);body.append(top);updateChannelFavorite();
     const live=streams.filter(s=>streamStatus(s)==='live'),upcoming=streams.filter(s=>streamStatus(s)==='upcoming').sort((a,b)=>Date.parse(a.start_scheduled||a.available_at)-Date.parse(b.start_scheduled||b.available_at));
     function group(label,entries,empty,last=false){const section=node('section','creator-page-group');section.append(node('h3','',label));const grid=node('div','creator-page-grid');for(const item of entries)grid.append(streamCard(item,last));section.append(entries.length?grid:node('p','discovery-empty',empty));body.append(section);}
     if(live.length)group('Live now',live,'');
@@ -108,6 +111,7 @@ export function setupDiscoveryFeatures({favorites,getStreams,getPlayer,play,time
     if(!validChannelId(id))return;
     show('channel');channelId=id;channelData=detailsCache.get(id)?.data||null;const own=++channelGeneration;
     if(location.hash!=='#channel/'+id)history.pushState(null,'','#channel/'+id);renderChannel();
+    void favorites.getTabs().then(updateChannelFavorite).catch(()=>{});
     const cached=detailsCache.get(id);if(cached&&Date.now()-cached.at<20*60000)return;
     try{
       if(!detailsPending.has(id))detailsPending.set(id,(async()=>{const response=await fetch('/api/channels/'+id,{signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Last stream unavailable.');const data=await response.json();if(data.last&&(!validVideoId(data.last.id)||data.last.channel?.id!==id))throw Error('Invalid channel data.');return data;})().finally(()=>detailsPending.delete(id)));
@@ -119,6 +123,10 @@ export function setupDiscoveryFeatures({favorites,getStreams,getPlayer,play,time
   window.addEventListener('hashchange',route);
   window.addEventListener('wlng-streams',()=>{if(mode==='channel')renderChannel();});
   window.addEventListener('wlng-open-channel',e=>void openChannel(e.detail));
+  function updateChannelFavorite(){
+    const favorite=$('creator-favorite');if(!favorite||mode!=='channel')return;
+    const saved=favorites.contains(channelId);favorite.textContent=saved?'♥ Favorited':'♡ Favorite creator';favorite.setAttribute('aria-pressed',String(saved));
+  }
   updateButtons();
-  return {add,updateButtons,openChannel,route};
+  return {add,updateButtons,openChannel,route,updateChannelFavorite};
 }

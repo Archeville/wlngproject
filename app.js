@@ -2,7 +2,7 @@ import { relatedLives, isOperaGXBrowser } from './watch-utils.mjs?v=20261105-pro
 import { setupFavorites } from './favorites.js?v=20261112-manage1';
 import { safeChannelPhoto, streamLibrary, streamStatus } from './stream-library.mjs?v=20261112-discovery1';
 import { setupStreamTools } from './stream-tools.js?v=20261120-discovery2';
-import { setupDiscoveryFeatures, validChannelId } from './discovery-features.js?v=20261120-discovery3';
+import { setupDiscoveryFeatures, validChannelId } from './discovery-features.js?v=20261120-discovery4';
 import { setupLiveNotifications } from './live-notifications.js?v=20261120-discovery2';
 (() => {
   const $ = (s) => document.querySelector(s);
@@ -495,6 +495,7 @@ import { setupLiveNotifications } from './live-notifications.js?v=20261120-disco
   window.addEventListener('wlng-refresh-streams',()=>{if(feedPending||Date.now()-lastFeedRequest<30000){window.dispatchEvent(new Event('wlng-feed-refreshed'));return;}lastFeedRequest=Date.now();feedPending=true;load().finally(()=>{feedPending=false;window.dispatchEvent(new Event('wlng-feed-refreshed'));});});
   const favorites = setupFavorites({ openDialog, closeDialog, onChange: () => {
     updatePlayerFavorite();
+    discoveryFeatures?.updateChannelFavorite();
     liveNotifications?.favoritesChanged();
     if (state.favoritesOnly) {
       if (state.updated) render();
